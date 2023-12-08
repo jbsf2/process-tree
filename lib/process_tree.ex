@@ -10,14 +10,32 @@ defmodule ProcessTree do
   Starting with the calling process, recursively looks for a value for `key` in
   the process dictionaries of the calling process and its ancestors.
 
+  If a particular ancestor process has died, it looks up to the next ancestor.
+
+  If a non-nil value is found in the tree, the value is cached in the dictionary of
+  the calling process.
+
   Returns the first non-nil value found in the tree. If no value is found, returns `nil`.
   """
   @spec get_dictionary_value(atom()) :: any()
-  def get_dictionary_value(key), do: lookup_value(key, self())
+  def get_dictionary_value(key) do
+    case Process.get(key) do
+      nil ->
+        ancestor_value(key, Process.get(:"$ancestors"))
+
+      value ->
+        value
+    end
+  end
 
   @doc """
   Starting with the calling process, recursively looks for a value for `key` in the
   process dictionaries of the calling process and its ancestors.
+
+  If a particular ancestor process has died, it looks up to the next ancestor.
+
+  If a non-nil value is found in the tree, the value is cached in the dictionary of
+  the calling process.
 
   Returns the first non-nil value found in the tree.
 
@@ -26,7 +44,7 @@ defmodule ProcessTree do
   """
   @spec get_dictionary_value(atom(), default: any()) :: any()
   def get_dictionary_value(key, default: default_value) do
-    case lookup_value(key, self()) do
+    case get_dictionary_value(key) do
       nil ->
         Process.put(key, default_value)
         default_value
@@ -36,21 +54,27 @@ defmodule ProcessTree do
     end
   end
 
-  @spec lookup_value(atom(), pid()) :: any()
-  defp lookup_value(_key, nil), do: nil
+  @spec ancestor_value(atom(), [pid()]) :: any()
+  defp ancestor_value(_key, nil), do: nil
+  defp ancestor_value(_key, []), do: nil
 
-  defp lookup_value(key, pid) do
-    info = Process.info(pid)
+  defp ancestor_value(key, ancestors) do
+    [current_ancestor | older_ancestors] = ancestors
+
+    current_ancestor = get_pid(current_ancestor)
+
+    info = Process.info(current_ancestor)
 
     cond do
       process_died?(info) ->
-        nil
+        ancestor_value(key, older_ancestors)
 
       (value = get_from_dictionary(info, key)) != nil ->
+        Process.put(key, value)
         value
 
       true ->
-        lookup_value(key, ancestor_pid(info))
+        ancestor_value(key, older_ancestors)
     end
   end
 
@@ -63,19 +87,14 @@ defmodule ProcessTree do
     Keyword.get(dictionary, key)
   end
 
-  @spec ancestor_pid(keyword()) :: pid() | port() | nil
-  defp ancestor_pid(process_info) do
-    ancestors = get_from_dictionary(process_info, :"$ancestors") || []
-    first_ancestor = ancestors |> List.first()
-    cond do
-      first_ancestor == nil ->
-        nil
-
-      is_atom(first_ancestor) ->
-        Process.whereis(first_ancestor)
-
+  @spec get_pid(pid() | atom()) :: pid()
+  defp get_pid(pid_or_registered_name) do
+    case is_pid(pid_or_registered_name) do
       true ->
-        first_ancestor
+        pid_or_registered_name
+
+      false ->
+        Process.whereis(pid_or_registered_name)
     end
   end
 end
