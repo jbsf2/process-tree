@@ -1,0 +1,2 @@
+bin/test24 \
+  && bin/test25

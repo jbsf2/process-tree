@@ -26,3 +26,5 @@ process_tree-*.tar
 /tmp/
 
 .vscode
+.tool-versions
+scratch.*
