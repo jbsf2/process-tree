@@ -8,6 +8,39 @@ defmodule ProcessTreeTest do
     :ok
   end
 
+  test "standard supervision tree" do
+    Process.put(:foo, :bar)
+
+    [
+      start_supervisor(self(), :gen1),
+      link_supervisor(self(), :gen2),
+      link_supervisor(self(), :gen3),
+      link_genserver(self(), :gen4)
+    ]
+    |> execute()
+
+    assert dict_value(:gen4, :foo) == :bar
+  end
+
+  test "standard supervision tree, after supervisor restarts" do
+    Process.put(:foo, :bar)
+
+    [
+      start_supervisor(self(), :gen1),
+      link_supervisor(self(), :gen2),
+      link_supervisor(self(), :gen3),
+      link_genserver(self(), :gen4)
+    ]
+    |> execute()
+
+    original_pid = pid(:gen4)
+    kill_supervisor(:gen3)
+    new_pid = pid(:gen4)
+
+    assert original_pid != new_pid
+    assert dict_value(:gen4, :foo) == :bar
+  end
+
   test "genserver test" do
     Process.put(:foo, :bar)
 
@@ -182,7 +215,7 @@ defmodule ProcessTreeTest do
         start_task(self(), :gen1),
         start_task(self(), :gen2),
         start_task(self(), :gen3),
-        start_task(self(), :gen4),
+        start_task(self(), :gen4)
       ]
       |> execute()
 
@@ -226,6 +259,20 @@ defmodule ProcessTreeTest do
     end
   end
 
+  @spec kill_supervisor(atom()) :: pid()
+  defp kill_supervisor(pid_name) do
+    full_name = full_name(pid_name)
+    original_pid = pid(pid_name)
+
+    true = Process.exit(original_pid, :kill)
+
+    receive do
+      {^full_name, :ready, new_pid} ->
+        Process.put(new_pid, :ready)
+        new_pid
+    end
+  end
+
   @spec kill_on_exit(atom()) :: :ok
   defp kill_on_exit(full_pid_name) do
     on_exit(fn ->
@@ -254,15 +301,19 @@ defmodule ProcessTreeTest do
           pid
       end
 
-    receive do
-      {^full_name, :ready} ->
-        :ok
+    if Process.get(pid) != :ready do
+      receive do
+        {^full_name, :ready, ^pid} ->
+          Process.put(pid, :ready)
+          :ok
+      end
     end
 
     pid
   end
 
-  @typep nestable_function :: (nestable_function() | nil -> {:ok, pid()})
+  @typep child_spec :: Supervisor.child_spec()
+  @typep nestable_function :: (nestable_function() | nil -> {:ok, pid()} | child_spec())
   @typep spawnable_function :: (-> any())
   @typep spawner :: (spawnable_function() -> {:ok, pid()})
 
@@ -288,14 +339,43 @@ defmodule ProcessTreeTest do
     fn next_function ->
       {:ok, pid} = GenServer.start(TestGenserver, {test_pid, full_name}, name: full_name)
       :ok = GenServer.call(pid, {:execute, next_function})
-      send(test_pid, {full_name, :ready})
+      send(test_pid, {full_name, :ready, pid})
       {:ok, pid}
     end
   end
 
-  # defp start_supervisor(test_pid, name) do
+  defp link_genserver(test_pid, name) do
+    full_name = full_name(name)
+    kill_on_exit(full_name)
 
-  # end
+    fn next_function ->
+      %{
+        id: full_name,
+        start: {TestGenserver, :start_link, [[test_pid, full_name, next_function]]}
+      }
+    end
+  end
+
+  defp link_supervisor(test_pid, name) do
+    full_name = full_name(name)
+    kill_on_exit(full_name)
+
+    fn next_function ->
+      %{
+        id: full_name,
+        start: {TestSupervisor, :start_link, [[test_pid, full_name, next_function]]}
+      }
+    end
+  end
+
+  defp start_supervisor(test_pid, name) do
+    full_name = full_name(name)
+    kill_on_exit(full_name)
+
+    fn next_function ->
+      {:ok, _pid} = TestSupervisor.start_link([test_pid, full_name, next_function])
+    end
+  end
 
   @spec nestable_function(pid(), atom(), spawner()) :: nestable_function()
   defp nestable_function(test_pid, this_pid_name, spawner) do
@@ -304,12 +384,11 @@ defmodule ProcessTreeTest do
 
     fn next_function ->
       this_function = fn ->
-
         if next_function != nil do
           {:ok, _pid} = next_function.()
         end
 
-        send(test_pid, {full_name, :ready})
+        send(test_pid, {full_name, :ready, self()})
 
         receive do
           {:dict_value, dict_key} ->

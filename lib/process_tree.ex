@@ -76,6 +76,7 @@ defmodule ProcessTree do
   @doc false
   def ancestor(pid, index) do
     ancestors = known_ancestors(pid)
+
     case length(ancestors) >= index do
       true ->
         Enum.at(ancestors, index - 1)
@@ -93,7 +94,7 @@ defmodule ProcessTree do
       pid == init_pid() ->
         collected_ancestors
 
-      (parent = process_info_parent(pid)) != nil->
+      (parent = process_info_parent(pid)) != nil ->
         older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
         known_ancestors(parent, [parent | collected_ancestors], older_dictionary_ancestors)
 
@@ -153,7 +154,7 @@ defmodule ProcessTree do
         Process.put(key, value)
         value
 
-      (parent = process_info_parent(pid)) != nil->
+      (parent = process_info_parent(pid)) != nil ->
         older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
         ancestor_value(key, parent, older_dictionary_ancestors)
 

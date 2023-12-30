@@ -6,6 +6,13 @@ defmodule TestGenserver do
     :name
   ]
 
+  def start_link([test_pid, name, next_function]) do
+    {:ok, pid} = GenServer.start_link(__MODULE__, {test_pid, name}, name: name)
+    :ok = GenServer.call(pid, {:execute, next_function})
+    send(test_pid, {name, :ready, pid})
+    {:ok, pid}
+  end
+
   def init({test_pid, name}) do
     state = %__MODULE__{
       test_pid: test_pid,
@@ -30,7 +37,6 @@ defmodule TestGenserver do
   end
 
   def handle_info(:exit, state) do
-    IO.puts("genserver #{state.name} stopping")
     {:stop, :shutdown, state}
   end
 end
