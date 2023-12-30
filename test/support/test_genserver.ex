@@ -3,32 +3,28 @@ defmodule TestGenserver do
 
   defstruct [
     :test_pid,
-    :next_function,
-    :dict_key,
     :name
   ]
 
-  def init({test_pid, next_function, dict_key, name}) do
+  def init({test_pid, name}) do
     state = %__MODULE__{
       test_pid: test_pid,
-      next_function: next_function,
-      dict_key: dict_key,
       name: name
     }
 
     {:ok, state}
   end
 
-  def handle_call(:execute_next_function, _from, state) do
-    if state.next_function != nil do
-      state.next_function.()
+  def handle_call({:execute, function}, _from, state) do
+    if function != nil do
+      {:ok, _pid} = function.()
     end
 
     {:reply, :ok, state}
   end
 
-  def handle_info(:dict_value, state) do
-    value = ProcessTree.get(state.dict_key)
+  def handle_info({:dict_value, dict_key}, state) do
+    value = ProcessTree.get(dict_key)
     send(state.test_pid, {state.name, :dict_value, value})
     {:noreply, state}
   end
