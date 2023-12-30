@@ -2,9 +2,25 @@ defmodule ProcessTreeTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  # In the tests below, Task is used as a representative for all the process types
-  # that track $ancestors - Agent, GenServer, Supervisor and Task. If it works for Task,
-  # it works for the others.
+  setup context do
+    line = Map.get(context, :line) |> Integer.to_string()
+    Process.put(:process_name_prefix, line <> "-")
+    :ok
+  end
+
+  test "genserver test" do
+    Process.put(:foo, :bar)
+
+    [
+      start_genserver(self(), :gen1, :foo),
+      start_genserver(self(), :gen2, :foo),
+      start_genserver(self(), :gen3, :foo),
+      start_genserver(self(), :gen4, :foo)
+    ]
+    |> execute()
+
+    assert dict_value(:gen4) == :bar
+  end
 
   describe "get()" do
     test "returns nil if there is no value found" do
@@ -19,7 +35,7 @@ defmodule ProcessTreeTest do
     test "when a value is set in the parent process' dictionary, it returns the value" do
       Process.put(:foo, :bar_from_parent)
 
-      [task_function(self(), :task, :foo)] |> execute()
+      [start_task(self(), :task, :foo)] |> execute()
 
       assert dict_value(:task) == :bar_from_parent
     end
@@ -40,12 +56,12 @@ defmodule ProcessTreeTest do
       assert Process.get(:foo) == :bar
     end
 
-    test "when an ancestor process has died, it looks up to the next ancestor" do
+    test "when an $ancestor process has died, it looks up to the next ancestor" do
       Process.put(:foo, :bar)
 
       [
-        task_function(self(), :gen1),
-        task_function(self(), :gen2, :foo)
+        start_task(self(), :gen1),
+        start_task(self(), :gen2, :foo)
       ]
       |> execute()
 
@@ -54,18 +70,41 @@ defmodule ProcessTreeTest do
       assert dict_value(:gen2) == :bar
     end
 
-    test "multiple dead ancestors" do
+    test "when multiple $ancestors have died, it keeps looking up" do
       Process.put(:foo, :bar)
 
       [
-        task_function(self(), :gen1),
-        task_function(self(), :gen2),
-        task_function(self(), :gen3, :foo)
+        start_task(self(), :gen1),
+        start_task(self(), :gen2),
+        start_task(self(), :gen3, :foo)
       ]
       |> execute()
 
       kill(:gen1)
       kill(:gen2)
+
+      assert dict_value(:gen3) == :bar
+    end
+
+    @tag :otp25_or_later
+    test "it works with a single spawn() ancestor" do
+      Process.put(:foo, :bar)
+
+      [spawn_process(self(), :gen1, :foo)] |> execute()
+
+      assert dict_value(:gen1) == :bar
+    end
+
+    @tag :otp25_or_later
+    test "it works with multiple spawn() ancestors" do
+      Process.put(:foo, :bar)
+
+      [
+        spawn_process(self(), :gen1),
+        spawn_process(self(), :gen2),
+        spawn_process(self(), :gen3, :foo)
+      ]
+      |> execute()
 
       assert dict_value(:gen3) == :bar
     end
@@ -75,9 +114,9 @@ defmodule ProcessTreeTest do
     @tag :otp25_or_later
     test "using plain spawn, can find all ancestors when they're all still alive" do
       [
-        spawn_function(self(), :gen1),
-        spawn_function(self(), :gen2),
-        spawn_function(self(), :gen3)
+        spawn_process(self(), :gen1),
+        spawn_process(self(), :gen2),
+        spawn_process(self(), :gen3)
       ]
       |> execute()
 
@@ -93,9 +132,9 @@ defmodule ProcessTreeTest do
     @tag :otp25_or_later
     test "using plain spawn, can't see beyond a dead ancestor" do
       [
-        spawn_function(self(), :gen1),
-        spawn_function(self(), :gen2),
-        spawn_function(self(), :gen3)
+        spawn_process(self(), :gen1),
+        spawn_process(self(), :gen2),
+        spawn_process(self(), :gen3)
       ]
       |> execute()
 
@@ -109,9 +148,9 @@ defmodule ProcessTreeTest do
 
     test "using Task, finds all ancestors when they're all still alive" do
       [
-        task_function(self(), :gen1),
-        task_function(self(), :gen2),
-        task_function(self(), :gen3)
+        start_task(self(), :gen1),
+        start_task(self(), :gen2),
+        start_task(self(), :gen3)
       ]
       |> execute()
 
@@ -126,8 +165,8 @@ defmodule ProcessTreeTest do
 
     test "using Task, when one intermediate ancestor has died, can find all ancestors" do
       [
-        task_function(self(), :gen1),
-        task_function(self(), :gen2)
+        start_task(self(), :gen1),
+        start_task(self(), :gen2)
       ]
       |> execute()
 
@@ -140,27 +179,36 @@ defmodule ProcessTreeTest do
 
     test "using Task, when multiple intermediate ancestors have died, can find all ancestors" do
       [
-        task_function(self(), :gen1),
-        task_function(self(), :gen2),
-        task_function(self(), :gen3)
+        start_task(self(), :gen1),
+        start_task(self(), :gen2),
+        start_task(self(), :gen3),
+        start_task(self(), :gen4),
       ]
       |> execute()
 
       kill(:gen1)
       kill(:gen2)
+      kill(:gen3)
 
-      gen3 = pid(:gen3)
-      assert ProcessTree.ancestor(gen3, 3) == self()
+      gen4 = pid(:gen4)
+      assert ProcessTree.ancestor(gen4, 4) == self()
     end
   end
 
+  defp full_name(pid_name) do
+    prefix = Process.get(:process_name_prefix)
+    (prefix <> Atom.to_string(pid_name)) |> String.to_atom()
+  end
+
   @spec dict_value(atom()) :: any()
-  def dict_value(pid_name) do
+  defp dict_value(pid_name) do
     pid = pid(pid_name)
     send(pid, :dict_value)
 
+    full_name = full_name(pid_name)
+
     receive do
-      {^pid_name, :dict_value, value} ->
+      {^full_name, :dict_value, value} ->
         value
     end
   end
@@ -168,38 +216,63 @@ defmodule ProcessTreeTest do
   @spec kill(atom()) :: pid()
   defp kill(pid_name) do
     pid = pid(pid_name)
-    true = Process.exit(pid, :kill)
-    pid
+    ref = Process.monitor(pid)
+
+    send(pid, :exit)
+
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        pid
+    end
+  end
+
+  @spec kill_on_exit(atom()) :: :ok
+  defp kill_on_exit(full_pid_name) do
+    on_exit(fn ->
+      pid = Process.whereis(full_pid_name)
+      # process may already be dead
+      if pid != nil do
+        true = Process.exit(pid, :kill)
+      end
+    end)
   end
 
   @spec pid(atom()) :: pid()
   defp pid(pid_name) do
-    registered_pid = Process.whereis(pid_name)
+    full_name = full_name(pid_name)
+    registered_pid = Process.whereis(full_name)
 
-    case registered_pid do
-      nil ->
-        receive do
-          {^pid_name, :pid, pid} ->
-            true = Process.register(pid, pid_name)
-            pid
-        end
+    pid =
+      case registered_pid do
+        nil ->
+          receive do
+            {^full_name, :pid, pid} ->
+              pid
+          end
 
-      pid ->
-        pid
+        pid ->
+          pid
+      end
+
+    receive do
+      {^full_name, :ready} ->
+        :ok
     end
+
+    pid
   end
 
   @typep nestable_function :: (nestable_function() | nil -> {:ok, pid()})
   @typep spawnable_function :: (-> any())
   @typep spawner :: (spawnable_function() -> {:ok, pid()})
 
-  @spec task_function(pid(), atom(), atom() | nil) :: nestable_function()
-  defp task_function(test_pid, this_pid_name, dict_key \\ nil) do
+  @spec start_task(pid(), atom(), atom() | nil) :: nestable_function()
+  defp start_task(test_pid, this_pid_name, dict_key \\ nil) do
     nestable_function(test_pid, this_pid_name, &Task.start/1, dict_key)
   end
 
-  @spec spawn_function(pid(), atom(), atom() | nil) :: nestable_function()
-  defp spawn_function(test_pid, this_pid_name, dict_key \\ nil) do
+  @spec spawn_process(pid(), atom(), atom() | nil) :: nestable_function()
+  defp spawn_process(test_pid, this_pid_name, dict_key \\ nil) do
     spawner = fn spawnable_function ->
       pid = spawn(spawnable_function)
       {:ok, pid}
@@ -208,40 +281,51 @@ defmodule ProcessTreeTest do
     nestable_function(test_pid, this_pid_name, spawner, dict_key)
   end
 
+  defp start_genserver(test_pid, name, dict_key) do
+    full_name = full_name(name)
+    kill_on_exit(full_name)
+
+    fn next_function ->
+      {:ok, pid} = GenServer.start(TestGenserver, {test_pid, next_function, dict_key, full_name}, name: full_name)
+      :ok = GenServer.call(pid, :execute_next_function)
+      send(test_pid, {full_name, :ready})
+      {:ok, pid}
+    end
+  end
+
   @spec nestable_function(pid(), atom(), spawner(), atom() | nil) :: nestable_function()
   defp nestable_function(test_pid, this_pid_name, spawner, dict_key) do
-    on_exit(fn ->
-      pid = Process.whereis(this_pid_name)
-
-      if pid != nil do
-        true = Process.exit(pid, :kill)
-      end
-    end)
+    full_name = full_name(this_pid_name)
+    kill_on_exit(full_name)
 
     fn next_function ->
       this_function = fn ->
-        send(test_pid, {this_pid_name, :pid, self()})
+
         if next_function != nil, do: next_function.()
+
+        send(test_pid, {full_name, :ready})
 
         if dict_key != nil do
           receive do
             :dict_value ->
               value = ProcessTree.get(dict_key)
-              send(test_pid, {this_pid_name, :dict_value, value})
+              send(test_pid, {full_name, :dict_value, value})
           end
         end
 
-        stop()
+        wait_for_exit()
       end
 
-      spawner.(this_function)
+      {:ok, pid} = spawner.(this_function)
+      true = Process.register(pid, full_name)
+      send(test_pid, {full_name, :pid, pid})
     end
   end
 
-  @spec stop() :: :ok
-  defp stop() do
+  @spec wait_for_exit() :: :ok
+  defp wait_for_exit() do
     receive do
-      :stop -> :ok
+      :exit -> :ok
     end
   end
 

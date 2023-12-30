@@ -26,7 +26,7 @@ defmodule ProcessTree do
   def get(key) do
     case Process.get(key) do
       nil ->
-        ancestor_value(key, Process.get(:"$ancestors"))
+        ancestor_value(key, self(), dictionary_ancestors(self()))
 
       value ->
         value
@@ -59,74 +59,77 @@ defmodule ProcessTree do
     end
   end
 
-  def ancestor(pid, 0), do: pid
-
-  def ancestor(pid, ancestor_index) do
-    proclib_ancestors =
-      case Process.info(pid) do
-        nil ->
-          []
-
-        info ->
-          get_from_dictionary(info, :"$ancestors") || []
-      end
-
-    ancestor(pid, ancestor_index, proclib_ancestors)
+  @spec known_ancestors(pid()) :: [pid()]
+  def known_ancestors(pid) do
+    known_ancestors(pid, [], dictionary_ancestors(pid))
+    |> Enum.reverse()
   end
 
-  @spec ancestor(pid(), non_neg_integer(), [pid()]) :: pid()
-  defp ancestor(pid, 0, _proclib_ancestors), do: pid
+  @spec parent(pid()) :: pid()
+  def parent(pid), do: ancestor(pid, 1)
 
-  defp ancestor(pid, ancestor_index, proclib_ancestors) do
-    proclib_parent =
-      case length(proclib_ancestors) > 0 do
-        true ->
-          hd(proclib_ancestors)
+  @doc false
+  def ancestor(pid, 0) do
+    pid
+  end
 
-        false ->
-          nil
-      end
+  @doc false
+  def ancestor(pid, index) do
+    ancestors = known_ancestors(pid)
+    case length(ancestors) >= index do
+      true ->
+        Enum.at(ancestors, index - 1)
 
-    older_proclib_ancestors =
-      case length(proclib_ancestors) > 1 do
-        true ->
-          tl(proclib_ancestors)
-
-        false ->
-          []
-      end
-
-    case process_info_parent(pid) do
-      nil ->
-        case proclib_parent do
-          nil ->
-            :unknown
-
-          parent ->
-            ancestor(parent, ancestor_index - 1, older_proclib_ancestors)
-        end
-
-      {:parent, parent} ->
-        ancestor(parent, ancestor_index - 1, older_proclib_ancestors)
+      false ->
+        :unknown
     end
   end
 
-  def parent(pid), do: ancestor(pid, 1)
-  def grandparent(pid), do: ancestor(pid, 2)
+  defp known_ancestors(pid, collected_ancestors, dictionary_ancestors) do
+    cond do
+      pid == nil ->
+        collected_ancestors
 
-  def init_pid() do
+      pid == init_pid() ->
+        collected_ancestors
+
+      (parent = process_info_parent(pid)) != nil->
+        older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
+        known_ancestors(parent, [parent | collected_ancestors], older_dictionary_ancestors)
+
+      length(dictionary_ancestors) > 0 ->
+        [parent | older_ancestors] = dictionary_ancestors
+        known_ancestors(parent, [parent | collected_ancestors], older_ancestors)
+
+      true ->
+        collected_ancestors
+    end
+  end
+
+  defp init_pid() do
     Process.whereis(:init)
   end
 
+  defp older_dictionary_ancestors(parent, []) do
+    dictionary_ancestors(parent)
+  end
+
+  defp older_dictionary_ancestors(_parent, child_dictionary_ancestors) do
+    [_parent | older_ancestors] = child_dictionary_ancestors
+    older_ancestors
+  end
+
   defp process_info_parent(pid) do
-    with true <- process_info_tracks_parent(),
-         true <- Process.alive?(pid) do
+    with true <- process_info_tracks_parent() do
       case Process.info(pid, :parent) do
         {:parent, :undefined} ->
           nil
 
         {:parent, parent} ->
-          {:parent, parent}
+          parent
+
+        nil ->
+          nil
       end
     else
       _ ->
@@ -143,46 +146,55 @@ defmodule ProcessTree do
     String.to_integer(System.otp_release())
   end
 
-  @spec ancestor_value(atom(), [pid()]) :: any()
-  defp ancestor_value(_key, nil), do: nil
-  defp ancestor_value(_key, []), do: nil
-
-  defp ancestor_value(key, ancestors) do
-    [current_ancestor | older_ancestors] = ancestors
-
-    current_ancestor = get_pid(current_ancestor)
-
-    info = Process.info(current_ancestor)
-
+  @spec ancestor_value(any(), pid(), [pid()]) :: any()
+  defp ancestor_value(key, pid, dictionary_ancestors) do
     cond do
-      process_died?(info) ->
-        ancestor_value(key, older_ancestors)
-
-      (value = get_from_dictionary(info, key)) != nil ->
+      (value = get_dictionary_value(pid, key)) != nil ->
         Process.put(key, value)
         value
 
+      (parent = process_info_parent(pid)) != nil->
+        older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
+        ancestor_value(key, parent, older_dictionary_ancestors)
+
+      length(dictionary_ancestors) > 0 ->
+        [parent | older_ancestors] = dictionary_ancestors
+        ancestor_value(key, parent, older_ancestors)
+
       true ->
-        ancestor_value(key, older_ancestors)
+        nil
     end
   end
 
-  @spec process_died?(keyword()) :: boolean()
-  defp process_died?(process_info), do: process_info == nil
+  @spec get_dictionary_value(pid(), atom()) :: any()
+  defp get_dictionary_value(nil, _key), do: nil
 
-  @spec get_from_dictionary(keyword(), atom()) :: any()
-  defp get_from_dictionary(process_info, key) do
-    dictionary = Keyword.get(process_info, :dictionary)
-    Keyword.get(dictionary, key)
+  defp get_dictionary_value(pid, key) do
+    case Process.info(pid, :dictionary) do
+      nil ->
+        nil
+
+      {:dictionary, dictionary} ->
+        Keyword.get(dictionary, key)
+    end
+  end
+
+  defp dictionary_ancestors(pid) do
+    (get_dictionary_value(pid, :"$ancestors") || [])
+    |> Enum.map(&get_pid/1)
   end
 
   @spec get_pid(pid() | atom()) :: pid()
   defp get_pid(pid_or_registered_name) do
+    # When a process has a registered name, proc_lib uses the
+    # name rather than the pid when inserting a process into
+    # $ancestors.
     case is_pid(pid_or_registered_name) do
       true ->
         pid_or_registered_name
 
       false ->
+        # will return nil if the process has died
         Process.whereis(pid_or_registered_name)
     end
   end

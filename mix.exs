@@ -6,6 +6,7 @@ defmodule ProcessTree.MixProject do
       app: :process_tree,
       version: "0.1.0",
       elixir: "~> 1.14",
+      elixirc_paths: ["lib", "test/support"],
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
