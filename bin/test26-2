@@ -1,0 +1,3 @@
+bin/switch26-2 \
+  && mix local.hex --force \
+  && mix test

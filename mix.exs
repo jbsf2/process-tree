@@ -22,7 +22,8 @@ defmodule ProcessTree.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:dialyxir, "~> 1.4", runtime: false}
+      {:dialyxir, "~> 1.4", runtime: false},
+      {:ex_doc, "~> 0.30.3", only: :dev, runtime: false}
     ]
   end
 end
