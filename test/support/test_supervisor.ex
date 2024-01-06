@@ -1,4 +1,6 @@
 defmodule TestSupervisor do
+  @moduledoc false
+
   use Supervisor
 
   def start_link([test_pid, name, child_spec_function]) do

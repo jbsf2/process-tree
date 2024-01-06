@@ -1,4 +1,5 @@
 defmodule TestGenserver do
+  @moduledoc false
   use GenServer
 
   defstruct [
