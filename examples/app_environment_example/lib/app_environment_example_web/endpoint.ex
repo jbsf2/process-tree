@@ -1,13 +1,13 @@
 defmodule AppEnvironmentExampleWeb.Endpoint do
   @moduledoc false
-  use Phoenix.Endpoint, otp_app: :application_environment
+  use Phoenix.Endpoint, otp_app: :app_environment_example
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
   @session_options [
     store: :cookie,
-    key: "_application_environment_key",
+    key: "_app_environment_example_key",
     signing_salt: "2ZNT7sEK",
     same_site: "Lax"
   ]
@@ -20,7 +20,7 @@ defmodule AppEnvironmentExampleWeb.Endpoint do
   # when deploying your static files in production.
   plug Plug.Static,
     at: "/",
-    from: :application_environment,
+    from: :app_environment_example,
     gzip: false,
     only: AppEnvironmentExampleWeb.static_paths()
 

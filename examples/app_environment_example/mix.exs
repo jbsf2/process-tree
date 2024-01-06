@@ -3,13 +3,15 @@ defmodule AppEnvironmentExample.MixProject do
 
   def project do
     [
-      app: :application_environment,
+      app: :app_environment_example,
       version: "0.1.0",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      name: "AppEnvironmentExample",
+      docs: docs()
     ]
   end
 
@@ -54,12 +56,7 @@ defmodule AppEnvironmentExample.MixProject do
     ]
   end
 
-  # Aliases are shortcuts or tasks specific to the current project.
-  # For example, to install project dependencies and perform other setup tasks, run:
-  #
-  #     $ mix setup
-  #
-  # See the documentation for `Mix` for more info on aliases.
+
   defp aliases do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
@@ -67,6 +64,16 @@ defmodule AppEnvironmentExample.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind default", "esbuild default"],
       "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
+    ]
+  end
+
+  defp docs() do
+    [
+      main: "readme",
+      extras: [
+        "README.md"
+      ],
+      api_reference: false
     ]
   end
 end

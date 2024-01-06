@@ -1,19 +1,14 @@
 defmodule AppEnvironmentExampleWeb.WelcomeLiveTest do
   use AppEnvironmentExampleWeb.ConnCase
-
   import Phoenix.LiveViewTest
 
   describe "Show" do
 
-    setup context do
-      context
-      |> Map.put(:today, Date.utc_today())
-    end
+    test "when the cutoff date has not passed, shows a 'welcome' message", %{conn: conn} do
+      tomorrow = Date.add(Date.utc_today(), 1)
 
-    test "when the cutoff date has not passed, shows a 'welcome' message", %{conn: conn, today: today} do
-      IO.inspect(self(), label: "test pid")
-      IO.inspect(ExUnit.fetch_test_supervisor, label: "supervisor")
-      tomorrow = Date.add(today, 1)
+      # set the cutoff date to tomorrow by writing the value
+      # to the process dictionary of the ExUnit test pid
       Process.put(:cutoff_date, tomorrow)
 
       {:ok, _show_live, html} = live(conn, ~p"/welcome")
@@ -21,9 +16,11 @@ defmodule AppEnvironmentExampleWeb.WelcomeLiveTest do
       assert html =~ "Welcome!"
     end
 
-    test "when cutoff date has passed, shows a 'sorry' message", %{conn: conn, today: today} do
-      IO.inspect(self(), label: "test pid")
-      yesterday = Date.add(today, -1)
+    test "when cutoff date has passed, shows a 'sorry' message", %{conn: conn} do
+      yesterday = Date.add(Date.utc_today(), -1)
+
+      # set the cutoff date to yesterday by writing the value
+      # to the process dictionary of the ExUnit test pid
       Process.put(:cutoff_date, yesterday)
 
       {:ok, _show_live, html} = live(conn, ~p"/welcome")

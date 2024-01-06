@@ -1,6 +1,6 @@
 import Config
 
-config :application_environment, AppEnvironmentExampleWeb.Endpoint,
+config :app_environment_example, AppEnvironmentExampleWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: 4000],
@@ -13,12 +13,12 @@ config :application_environment, AppEnvironmentExampleWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
-config :application_environment, AppEnvironmentExampleWeb.Endpoint,
+config :app_environment_example, AppEnvironmentExampleWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/application_environment_web/(controllers|live|components)/.*(ex|heex)$"
+      ~r"lib/app_environment_example_web/(controllers|live|components)/.*(ex|heex)$"
     ]
   ]
 

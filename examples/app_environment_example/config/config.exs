@@ -1,6 +1,6 @@
 import Config
 
-config :application_environment, AppEnvironmentExampleWeb.Endpoint,
+config :app_environment_example, AppEnvironmentExampleWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Phoenix.Endpoint.Cowboy2Adapter,
   render_errors: [
