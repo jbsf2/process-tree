@@ -46,10 +46,10 @@ defmodule ProcessTree.MixProject do
       canonical: "http://hexdocs.pm/processtree",
       extras: [
         "README.md",
-        "examples/app_environment_example/README.md"
+        "examples/environment_variable_example/README.md"
       ],
       groups_for_extras: [
-        "Examples": ["examples/app_environment_example/README.md"]
+        "Examples": ["examples/environment_variable_example/README.md"]
       ],
       main: "ProcessTree",
       source_ref: "v#{@version}"

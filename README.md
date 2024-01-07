@@ -30,6 +30,6 @@ the process dictionary of the calling process.
 
 ## Examples
 
-(Environment Variable)[examples/app_environment_example/README.md]
+(Environment Variable)[examples/environment_variable_example/README.md]
 
 
