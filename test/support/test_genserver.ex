@@ -9,6 +9,7 @@ defmodule TestGenserver do
 
   def start_link([test_pid, name, next_function]) do
     {:ok, pid} = GenServer.start_link(__MODULE__, {test_pid, name}, name: name)
+    send(test_pid, {name, :pid, pid})
     :ok = GenServer.call(pid, {:execute, next_function})
     send(test_pid, {name, :ready, pid})
     {:ok, pid}

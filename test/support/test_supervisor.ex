@@ -5,6 +5,7 @@ defmodule TestSupervisor do
 
   def start_link([test_pid, name, child_spec_function]) do
     {:ok, pid} = Supervisor.start_link(__MODULE__, nil, name: name)
+    send(test_pid, {name, :pid, pid})
     child_spec = child_spec_function.()
     {:ok, _child_pid} = Supervisor.start_child(pid, child_spec)
     send(test_pid, {name, :ready, pid})
