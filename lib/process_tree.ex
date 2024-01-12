@@ -73,7 +73,7 @@ defmodule ProcessTree do
   * Whether the given process and its ancestors were started via raw `spawn` or
     were instead started as Tasks, Agents, GenServers or Supervisors
 
-  `ProcessTree` takes these factors, and more, into account and produces the most complete
+  `ProcessTree` takes these factors and more into account and produces the most complete
   list of ancestors that is possible.
 
   In the mainline case - running under a supervision tree, as recommended - `known_ancestors/1` will
@@ -85,9 +85,9 @@ defmodule ProcessTree do
   processes are still alive.
 
   List items will be pids in all but the most unusual of circumstances. For example, if a GenServer
-  is spawned by another GenServer that has a registered name, and the parent GenServer dies, then the parent
-  may be represented in the list of the child's known ancestors using the parent's registered name -
-  an atom, rather than a pid.
+  is spawned by parent/grandparent GenServers that have registered names, and the parent GenServer dies,
+  then the parent & grandparent may be represented in the list of the child's known ancestors using
+  the their registered names - atoms, rather than pids. Precise behavior depends on OTP major version.
   """
   @spec known_ancestors(pid()) :: [pid() | atom()]
   def known_ancestors(pid) do
@@ -100,22 +100,27 @@ defmodule ProcessTree do
 
   Returns `:unknown` if the parent is unknown.
 
+  If `pid` is the `:init` pid (`PID<0.0.0>`), returns :undefined
+
   If `pid` is part of a supervision tree, the parent will be known regardless of any other factors.
 
   If the parent is known, the return value will be a pid in all but the most unusual of
   circumstances. See `known_ancestors/1` for dicussion.
   """
   @spec parent(pid()) :: pid() | atom()
-  def parent(pid), do: ancestor(pid, 1)
+  def parent(pid) do
+    case Process.whereis(:init) do
+      ^pid -> :undefined
+      _ -> ancestor(pid, 1)
+    end
+  end
 
-  @doc false
   @spec ancestor(pid(), non_neg_integer()) :: id()
-  def ancestor(pid, 0) do
+  defp ancestor(pid, 0) do
     pid
   end
 
-  @doc false
-  def ancestor(pid, index) do
+  defp ancestor(pid, index) do
     ancestors = known_ancestors(pid)
 
     case length(ancestors) >= index do

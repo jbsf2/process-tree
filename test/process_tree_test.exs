@@ -199,20 +199,32 @@ defmodule ProcessTreeTest do
         self()
       ]
     end
+  end
 
-    test "using Task" do
-      [
-        start_genserver(self(), :gen0),
-        start_genserver(self(), :gen1),
-        start_genserver(self(), :gen2),
-      ]
-      |> execute()
+  describe "known_ancestors()" do
+    @tag :otp25_or_later
+    test "under OTP 25+, includes the :init pid as the last known ancestor" do
+      ancestors = ProcessTree.known_ancestors(self())
+      assert List.last(ancestors) == Process.whereis(:init)
+    end
+  end
 
-      kill(:gen0)
-      kill(:gen1)
+  describe "parent()" do
+    test "when the pid is the :init pid, returns :undefined" do
+      init = Process.whereis(:init)
+      assert ProcessTree.parent(init) == :undefined
+    end
 
-      dbg(pid(:gen2))
-      dbg(ancestors(:gen2, 3))
+    test "when the pid has died, returns :unknown" do
+      [spawn_process(self(), :gen1)] |> execute()
+      pid = kill(:gen1)
+      assert ProcessTree.parent(pid) == :unknown
+    end
+
+    @tag :pre_otp25
+    test "when using earlier OTP, returns :unknown for 'spawn' processes" do
+      [spawn_process(self(), :gen1)] |> execute()
+      assert ProcessTree.parent(pid(:gen1)) == :unknown
     end
   end
 

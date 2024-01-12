@@ -13,13 +13,10 @@ It's common in Elixir apps to rely on global references or global variables for 
 
 `ProcessTree` solves the problem by localizing data to a particular branch of the Elixir process tree. When testing with ExUnit, each ExUnit test process, and all processes spawned by the test process, can use `get/1` or `get/2` to see their own private copy of the data of interest. 
 
-## Example use cases
+## Example use case
 
 [Customizing environment variables](./examples/environment-variable-example.md) in ExUnit tests while preserving `async: true`.
 
-Using & testing with [singleton GenServers](./examples/genserver-example.md), without relying on `__MODULE__` as a name
-
-[Using protocols to model external services](./examples/protocol-example.md)
 
 ## Smoothing over process ancestry complications
 
