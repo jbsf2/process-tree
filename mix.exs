@@ -8,7 +8,7 @@ defmodule ProcessTree.MixProject do
     [
       app: :process_tree,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.10",
       elixirc_options: [warnings_as_errors: true],
       elixirc_paths: ["lib", "test/support"],
       start_permanent: Mix.env() == :prod,
@@ -45,7 +45,6 @@ defmodule ProcessTree.MixProject do
       authors: ["JB Steadman"],
       canonical: "http://hexdocs.pm/processtree",
       extras: [
-        "README.md",
         "examples/environment-variable-example.md"
       ],
       groups_for_extras: [

@@ -66,11 +66,20 @@ defmodule ProcessTreeTest do
 
       gen1 = kill(:gen1)
       assert dict_value(:gen2, :foo) == :bar
-      assert ancestors(:gen2, 2) == [
-        gen1,
-        self()
-      ]
 
+      expected_gen1 =
+        case OtpRelease.process_info_tracks_parent?() do
+          true -> gen1
+          false -> full_name(:gen1)
+        end
+
+      expected_ancestors =
+        case ElixirRelease.task_spawned_by_proc_lib?() do
+          true -> [expected_gen1, self()]
+          false -> [gen1, self()]
+        end
+
+      assert ancestors(:gen2, 2) == expected_ancestors
     end
 
     test "with multiple dead $ancestors" do
@@ -87,12 +96,32 @@ defmodule ProcessTreeTest do
       gen3 = kill(:gen3)
 
       assert dict_value(:gen4, :foo) == :bar
-      assert ancestors(:gen4, 4) == [
-        gen3,
-        gen2,
-        gen1,
-        self()
-      ]
+
+      expected_gen3 =
+        case OtpRelease.process_info_tracks_parent?() do
+          true -> gen3
+          false -> full_name(:gen3)
+        end
+
+      expected_ancestors =
+        case ElixirRelease.task_spawned_by_proc_lib?() do
+          true ->
+            [
+              expected_gen3,
+              full_name(:gen2),
+              full_name(:gen1),
+              self()
+            ]
+
+          false ->
+            [
+              gen3,
+              gen2,
+              gen1,
+              self()
+            ]
+        end
+      assert ancestors(:gen4, 4) == expected_ancestors
     end
 
     test "with dead ancestors who have registered names in $ancestors" do

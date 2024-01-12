@@ -4,10 +4,10 @@ defmodule ProcessTree do
   @moduledoc "README.md"
              |> File.read!()
              |> String.split("<!-- MDOC -->")
-             |> Enum.filter(&(&1 =~ ~R{<!\-\-\ INCLUDE\ \-\->}))
+             |> Enum.filter(&(&1 =~ ~r{<!\-\-\ INCLUDE\ \-\->}))
              |> Enum.join("\n")
              # compensate for anchor id differences between ExDoc and GitHub
-             |> (&Regex.replace(~R{\(\#\K(?=[a-z][a-z0-9-]+\))}, &1, "module-")).()
+             |> (&Regex.replace(~r{\(\#\K(?=[a-z][a-z0-9-]+\))}, &1, "module-")).()
 
   alias ProcessTree.OtpRelease
 
@@ -48,6 +48,13 @@ defmodule ProcessTree do
 
   If no value is found, the provided default value is cached in the dictionary of the
   calling process and then returned.
+
+  Default values might typically be read from the Application environment. For example:
+
+  ```
+  default_value = Application.get_env(:my_app, :some_key)
+  value = ProcessTree.get(:some_key, default: default_value)
+  ```
   """
   @spec get(atom(), default: any()) :: any()
   def get(key, default: default_value) do
@@ -62,12 +69,12 @@ defmodule ProcessTree do
   end
 
   @doc """
-  Returns a list of the known ancestors for the given pid, from "newest" to "oldest".
+  Returns a list of the known ancestors of `pid`, from "newest" to "oldest".
 
   The set of ancestors that is "known" depends on factors including:
 
-  * The OTP major version the code is running under. (OTP 25 introduced new
-    functionality for tracking ancestors.)
+  * The OTP major version the code is running under. (OTP 25 [introduced](https://github.com/erlang/otp/pull/5768)
+    new functionality for tracking ancestors.)
   * Whether the process and its ancestors are running in a supervision tree
   * Whether ancestor processes are still alive
   * Whether the given process and its ancestors were started via raw `spawn` or
@@ -81,7 +88,7 @@ defmodule ProcessTree do
   as well as the ancestor of the initial/topmost Supervisor.
 
   When running under OTP 25 and later, the list will also include all additional ancestors,
-  up to and including the `:init` process (PID<0.0.0>), provided that the additional ancestor
+  up to and including the `:init` process (`PID<0.0.0>`), provided that the additional ancestor
   processes are still alive.
 
   List items will be pids in all but the most unusual of circumstances. For example, if a GenServer
@@ -100,7 +107,7 @@ defmodule ProcessTree do
 
   Returns `:unknown` if the parent is unknown.
 
-  If `pid` is the `:init` pid (`PID<0.0.0>`), returns :undefined
+  If `pid` represents the `:init` process (`PID<0.0.0>`), returns `:undefined`
 
   If `pid` is part of a supervision tree, the parent will be known regardless of any other factors.
 
