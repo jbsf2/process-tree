@@ -61,12 +61,50 @@ defmodule ProcessTree do
     end
   end
 
+  @doc """
+  Returns a list of the known ancestors for the given pid, from "newest" to "oldest".
+
+  The set of ancestors that is "known" depends on factors including:
+
+  * The OTP major version the code is running under. (OTP 25 introduced new
+    functionality for tracking ancestors.)
+  * Whether the process and its ancestors are running in a supervision tree
+  * Whether ancestor processes are still alive
+  * Whether the given process and its ancestors were started via raw `spawn` or
+    were instead started as Tasks, Agents, GenServers or Supervisors
+
+  `ProcessTree` takes these factors, and more, into account and produces the most complete
+  list of ancestors that is possible.
+
+  In the mainline case - running under a supervision tree, as recommended - `known_ancestors/1` will
+  return a list that contains, at minimum, all of the ancestor Supervisors in the tree
+  as well as the ancestor of the initial/topmost Supervisor.
+
+  When running under OTP 25 and later, the list will also include all additional ancestors,
+  up to and including the `:init` process (PID<0.0.0>), provided that the additional ancestor
+  processes are still alive.
+
+  List items will be pids in all but the most unusual of circumstances. For example, if a GenServer
+  is spawned by another GenServer that has a registered name, and the parent GenServer dies, then the parent
+  may be represented in the list of the child's known ancestors using the parent's registered name -
+  an atom, rather than a pid.
+  """
   @spec known_ancestors(pid()) :: [pid() | atom()]
   def known_ancestors(pid) do
     known_ancestors(pid, [], dictionary_ancestors(pid))
     |> Enum.reverse()
   end
 
+  @doc """
+  Returns the parent of `pid`, if the parent is known.
+
+  Returns `:unknown` if the parent is unknown.
+
+  If `pid` is part of a supervision tree, the parent will be known regardless of any other factors.
+
+  If the parent is known, the return value will be a pid in all but the most unusual of
+  circumstances. See `known_ancestors/1` for dicussion.
+  """
   @spec parent(pid()) :: pid() | atom()
   def parent(pid), do: ancestor(pid, 1)
 

@@ -3,33 +3,45 @@
 <!-- MDOC -->
 <!-- INCLUDE -->
 
-`ProcessTree` is a module for avoiding global variables & gloabal references in Elixir applications.
+`ProcessTree` is a module for navigating the process ancestry hierachy.
 
-## Motivation / use case
+## Motivation
 
-It's common in Elixir apps to rely on global references or global variables for locating application
-services or configuration parameters. This presents problems when we test our code. We need to work
-around our global data, for example by mocking GenServers, or by setting/resetting environment variables 
-and using `async: false`.
+`ProcessTree` was originally developed as a tool for avoiding global state & global references in Elixir applications. 
 
-`ProcessTree` solves the problem by localizing data to a particular branch of the Elixir process tree.
-When testing with ExUnit, each ExUnit test process, and all processes spawned by the test process, see
-their own private copy of the data of interest. 
+It's common in Elixir apps to rely on global references or global variables for locating application services or configuration parameters. This presents problems when we test our code. We need to work around our global data, for example by setting/resetting environment variables and using `async: false`.
 
-## How it works
+`ProcessTree` solves the problem by localizing data to a particular branch of the Elixir process tree. When testing with ExUnit, each ExUnit test process, and all processes spawned by the test process, can use `get/1` or `get/2` to see their own private copy of the data of interest. 
 
-`ProcessTree` reads data from the process dictionary. `get/1` and `get/2` first look for data in the dictionary
-of the calling process. If no value is found, `get/1` and `get/2` move up the process ancestry hierarchy, 
-looking in the dictionaries of the calling process' parent, grandparent, and so on, until a value is found or 
-until there are no more ancestor processes to check.
+## Example use cases
 
-As an optimization, if `get/1` and `get/2` find a value up the process hierarchy, the value is then cached in 
-the process dictionary of the calling process.
+[Customizing environment variables](./examples/environment-variable-example.md) in ExUnit tests while preserving `async: true`.
 
-`get/2` provides a hook for using a default value as a fallback in case no value is found in the process hierarchy. 
+Using & testing with [singleton GenServers](./examples/genserver-example.md), without relying on `__MODULE__` as a name
 
-## Examples
+[Using protocols to model external services](./examples/protocol-example.md)
 
-[Environment Variables](./examples/environment-variable-example.md)
+## Smoothing over process ancestry complications
+
+OTP 25 introduced the ability to find the parent of a process via `Process.info/2`. Prior to OTP 25, it was possible to find the parent of a process only for specific processes such as Task, GenServer, Agent, and Superivsor.
+
+Even under OTP 25+, `Process.info/2` is only useful for processes that are still alive, meaning it can't be used, for example, to find the grandparent of a process if the parent of the process has died. 
+
+`ProcessTree` accounts for all complicating factors. Each of the functions exposed by `ProcessTree` will return the most complete answer possible, regardless of how the processes in the ancestry hierarchy are started or managed, regardless of which OTP version is in use, and so on.
+
+Put another way, `ProcessTree` is a "no-judgments zone". If you're following recommended guidelines for starting/running Elixir processes, `ProcessTree` will almost certainly meet your needs. But even in situations typically considered inadvisable or even crazy, `ProcessTree` functions will do their very best to provide meaningful answers.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

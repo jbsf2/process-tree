@@ -199,6 +199,21 @@ defmodule ProcessTreeTest do
         self()
       ]
     end
+
+    test "using Task" do
+      [
+        start_genserver(self(), :gen0),
+        start_genserver(self(), :gen1),
+        start_genserver(self(), :gen2),
+      ]
+      |> execute()
+
+      kill(:gen0)
+      kill(:gen1)
+
+      dbg(pid(:gen2))
+      dbg(ancestors(:gen2, 3))
+    end
   end
 
   describe "get()" do
