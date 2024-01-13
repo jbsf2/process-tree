@@ -16,7 +16,7 @@ defmodule ProcessTree.MixProject do
 
       # Docs
       name: "ProcessTree",
-      description: "A module for avoiding global variables & gloabal references in Elixir applications",
+      description: "A module for navigating the Elixir process ancestry hierarchy",
       homepage_url: @github_page,
       source_url: @github_page,
       docs: docs(),

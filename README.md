@@ -3,7 +3,7 @@
 <!-- MDOC -->
 <!-- INCLUDE -->
 
-`ProcessTree` is a module for navigating the process ancestry hierachy.
+`ProcessTree` is a module for navigating the Elixir process ancestry hierachy.
 
 ## Motivation
 

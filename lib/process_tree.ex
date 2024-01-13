@@ -107,7 +107,7 @@ defmodule ProcessTree do
 
   Returns `:unknown` if the parent is unknown.
 
-  If `pid` represents the `:init` process (`PID<0.0.0>`), returns `:undefined`
+  Returns `:undefined` if `pid` represents the `:init` process (`PID<0.0.0>`).
 
   If `pid` is part of a supervision tree, the parent will be known regardless of any other factors.
 
