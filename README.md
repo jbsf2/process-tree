@@ -45,7 +45,7 @@ Even under OTP 25+, `Process.info/2` is only useful for processes that are still
 
 `ProcessTree` accounts for all complicating factors. Each of the functions exposed by `ProcessTree` will return the most complete answer possible, regardless of how the processes in the ancestry hierarchy are started or managed, regardless of which OTP version is in use, and so on.
 
-Put another way, `ProcessTree` is a "no-judgments zone". If you're following recommended guidelines for starting/running Elixir processes, `ProcessTree` will almost certainly meet your needs. But even in situations typically considered inadvisable or even totally crazy, `ProcessTree` will do its very best to provide meaningful answers.
+Put another way, `ProcessTree` is a "no-judgments zone". If you're following recommended guidelines for starting/running Elixir processes, `ProcessTree` will almost certainly meet your needs. But even in situations typically considered inadvisable or totally crazy, `ProcessTree` will do its very best to provide meaningful answers.
 
 
 
