@@ -2,7 +2,7 @@ defmodule ProcessTree.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @github_page "https://github.com/jbsf2/processtree"
+  @github_page "https://github.com/jbsf2/process-tree"
 
   def project do
     [
@@ -41,7 +41,7 @@ defmodule ProcessTree.MixProject do
     [
       api_reference: false,
       authors: ["JB Steadman"],
-      canonical: "http://hexdocs.pm/processtree",
+      canonical: "http://hexdocs.pm/process_tree",
       extras: [
         "examples/environment-variable-example.md"
       ],
