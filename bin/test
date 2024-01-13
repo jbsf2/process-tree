@@ -1,9 +1,9 @@
-bin/switch14 \
+bin/elixir14 \
   && bin/test24 \
   && bin/test25 \
-  && bin/switch15 \
+  && bin/elixir15 \
   && bin/test24 \
   && bin/test25 \
-  && bin/switch16 \
+  && bin/elixir16 \
   && bin/test24 \
   && bin/test25 \ 
