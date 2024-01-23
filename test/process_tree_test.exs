@@ -17,6 +17,7 @@ defmodule ProcessTreeTest do
     end
 
     test "standard supervision tree" do
+
       [
         start_supervisor(self(), :gen1),
         link_supervisor(self(), :gen2),
@@ -35,6 +36,7 @@ defmodule ProcessTreeTest do
     end
 
     test "standard supervision tree, after supervisor restarts" do
+
       [
         start_supervisor(self(), :gen1),
         link_supervisor(self(), :gen2),

@@ -1,2 +1,0 @@
-asdf local elixir 1.15.7-otp-25 \
-  && asdf local erlang 26.2.1

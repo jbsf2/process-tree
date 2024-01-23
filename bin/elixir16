@@ -1,1 +1,1 @@
-asdf local elixir 1.16.0
+elixir bin/switch_version.exs elixir=1.16

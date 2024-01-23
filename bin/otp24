@@ -1,1 +1,1 @@
-asdf local erlang 24.3.4.14
+elixir bin/switch_version.exs otp=24

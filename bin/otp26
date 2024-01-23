@@ -1,0 +1,1 @@
+elixir bin/switch_version.exs otp=26

@@ -122,11 +122,6 @@ defmodule ProcessTree do
     end
   end
 
-  @spec ancestor(pid(), non_neg_integer()) :: id()
-  defp ancestor(pid, 0) do
-    pid
-  end
-
   defp ancestor(pid, index) do
     ancestors = known_ancestors(pid)
 
@@ -248,7 +243,7 @@ defmodule ProcessTree do
     |> Enum.map(&get_pid_if_available/1)
   end
 
-  @spec get_pid_if_available(pid() | atom()) :: pid()
+  @spec get_pid_if_available(pid() | atom()) :: pid() | atom()
   defp get_pid_if_available(pid_or_registered_name) do
     case is_pid(pid_or_registered_name) do
       true ->

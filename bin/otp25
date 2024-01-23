@@ -1,1 +1,1 @@
-asdf local erlang 25.3.2.7
+elixir bin/switch_version.exs otp=25
