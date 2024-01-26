@@ -13,6 +13,13 @@ defmodule ProcessTree do
 
   @typep id :: pid() | atom()
 
+  if !OtpRelease.process_info_tracks_parent?() do
+    # suppress warnings seen in OTP 24 and earlier
+    @dialyzer {:no_match, {:known_ancestors, 3}}
+    @dialyzer {:no_match, {:ancestor_value, 3}}
+    @dialyzer {:no_unused, {:older_dictionary_ancestors, 2}}
+  end
+
   @doc """
   Starting with the calling process, recursively looks for a value for `key` in
   the process dictionaries of the calling process and its known ancestors.
@@ -171,7 +178,7 @@ defmodule ProcessTree do
     older_ancestors
   end
 
-  @spec process_info_parent(id()) :: pid()
+  @spec process_info_parent(id()) :: pid() | nil
   defp process_info_parent(name) when is_atom(name) do
     nil
   end
