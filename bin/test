@@ -1,3 +1,5 @@
+#! /bin/bash
+
 bin/elixir14 \
   && bin/test24 \
   && bin/test25 \

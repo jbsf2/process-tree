@@ -6,7 +6,7 @@ elixir bin/switch_version.exs otp=26 \
   && mix test \
   && bin/elixir15 \
   && mix local.hex --force \
-  && mix test \  
+  && mix test \
   && bin/elixir16 \
   && mix local.hex --force \
   && mix test

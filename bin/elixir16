@@ -1,1 +1,3 @@
+#! /bin/bash
+
 elixir bin/switch_version.exs elixir=1.16
