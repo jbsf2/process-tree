@@ -1,0 +1,5 @@
+#! /bin/bash
+
+bin/otp24 \
+  && mix local.hex --force \
+  && mix dialyzer

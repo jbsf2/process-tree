@@ -1,0 +1,12 @@
+#! /bin/bash
+
+elixir bin/switch_version.exs otp=26 \
+  && bin/elixir14 \
+  && mix local.hex --force \
+  && mix dialyzer \
+  && bin/elixir15 \
+  && mix local.hex --force \
+  && mix dialyzer \
+  && bin/elixir16 \
+  && mix local.hex --force \
+  && mix dialyzer
