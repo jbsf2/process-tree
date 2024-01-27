@@ -229,19 +229,13 @@ defmodule ProcessTree do
     nil
   end
 
-  if OtpRelease.optimized_dictionary_access?() do
-    defp get_dictionary_value(pid, key) do
-      Process.info(pid, {:dictionary, key})
-    end
-  else
-    defp get_dictionary_value(pid, key) do
-      case Process.info(pid, :dictionary) do
-        nil ->
-          nil
+  defp get_dictionary_value(pid, key) do
+    case Process.info(pid, :dictionary) do
+      nil ->
+        nil
 
-        {:dictionary, dictionary} ->
-          Keyword.get(dictionary, key)
-      end
+      {:dictionary, dictionary} ->
+        Keyword.get(dictionary, key)
     end
   end
 

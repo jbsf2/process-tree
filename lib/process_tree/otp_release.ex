@@ -9,24 +9,4 @@ defmodule ProcessTree.OtpRelease do
     major_version() >= 25
   end
 
-  @dialyzer {:nowarn_function, {:optimized_dictionary_access?, 0}}
-  def optimized_dictionary_access?() do
-    # optimized dictionary access released in 26.2: https://www.erlang.org/news/166
-    cond do
-      major_version() < 26 ->
-        false
-
-      major_version() > 26 ->
-        true
-
-      major_version() == 26 ->
-        try do
-          # just see if it works
-          Process.info(self(), {:dictionary, :foo})
-          true
-        rescue
-          _  -> false
-        end
-    end
-  end
 end
