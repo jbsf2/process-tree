@@ -48,7 +48,7 @@ defmodule VersionSwitcher do
     %{
       "24" => "24.3.4.14",
       "25" => "25.3.2.7",
-      "26" => "26.2.1"
+      "26" => "26.2.2"
     }
     |> Map.get(otp_version)
   end
