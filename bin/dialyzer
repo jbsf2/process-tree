@@ -3,9 +3,12 @@
 bin/elixir14 \
   && bin/dialyzer24 \
   && bin/dialyzer25 \
+  && bin/dialyzer26 \
   && bin/elixir15 \
   && bin/dialyzer24 \
   && bin/dialyzer25 \
+  && bin/dialyzer26 \
   && bin/elixir16 \
   && bin/dialyzer24 \
-  && bin/dialyzer25
+  && bin/dialyzer25 \
+  && bin/dialyzer26
