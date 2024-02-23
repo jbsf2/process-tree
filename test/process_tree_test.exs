@@ -292,6 +292,14 @@ defmodule ProcessTreeTest do
 
       assert Process.get(:foo) == :bar
     end
+
+    test "supports arbitrary keys" do
+      Process.put({:some, :disparate, :key}, :bar)
+
+      assert ProcessTree.get({:some, :disparate, :key}) == :bar
+
+      assert Process.get({:some, :disparate, :key}) == :bar
+    end
   end
 
   defp full_name(pid_name) do

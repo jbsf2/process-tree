@@ -31,7 +31,7 @@ defmodule ProcessTree do
 
   Returns the first non-nil value found in the tree. If no value is found, returns `nil`.
   """
-  @spec get(atom()) :: any()
+  @spec get(term()) :: any()
   def get(key) do
     case Process.get(key) do
       nil ->
@@ -63,7 +63,7 @@ defmodule ProcessTree do
   value = ProcessTree.get(:some_key, default: default_value)
   ```
   """
-  @spec get(atom(), default: any()) :: any()
+  @spec get(term(), default: any()) :: any()
   def get(key, default: default_value) do
     case get(key) do
       nil ->
@@ -200,7 +200,6 @@ defmodule ProcessTree do
     defp process_info_parent(_pid), do: nil
   end
 
-
   @spec ancestor_value(any(), id(), [id()]) :: any()
   defp ancestor_value(key, pid_or_name, dictionary_ancestors) do
     cond do
@@ -235,7 +234,13 @@ defmodule ProcessTree do
         nil
 
       {:dictionary, dictionary} ->
-        Keyword.get(dictionary, key)
+        case List.keyfind(dictionary, key, 0) do
+          {_key, value} ->
+            value
+
+          nil ->
+            nil
+        end
     end
   end
 
