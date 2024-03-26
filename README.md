@@ -3,11 +3,9 @@
 <!-- MDOC -->
 <!-- INCLUDE -->
 
-`ProcessTree` is a module for navigating the Elixir process ancestry hierachy.
+`ProcessTree` is a module for avoiding global state in Elixir applications. 
 
 ## Motivation
-
-`ProcessTree` was originally developed as a tool for avoiding global state & global references in Elixir applications. 
 
 It's common in Elixir apps to rely on global references or global variables for locating application services or configuration parameters. This presents problems when we test our code. We need to work around our global data, for example by setting/resetting environment variables and using `async: false`.
 
