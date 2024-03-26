@@ -1,7 +1,7 @@
 defmodule ProcessTree.MixProject do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.1.2"
   @github_page "https://github.com/jbsf2/process-tree"
 
   def project do
@@ -16,7 +16,7 @@ defmodule ProcessTree.MixProject do
 
       # Docs
       name: "ProcessTree",
-      description: "A module for navigating the Elixir process ancestry hierarchy",
+      description: "A module for avoiding global state in Elixir applications",
       homepage_url: @github_page,
       source_url: @github_page,
       docs: docs(),
