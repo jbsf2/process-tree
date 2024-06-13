@@ -21,28 +21,6 @@ defmodule ProcessTree do
   end
 
   @doc """
-  Starting with the calling process, recursively looks for a value for `key` in
-  the process dictionaries of the calling process and its known ancestors.
-
-  If a particular ancestor process has died, it looks up to the next ancestor, if possible.
-
-  If a non-nil value is found in the tree, the value is cached in the dictionary of
-  the calling process.
-
-  Returns the first non-nil value found in the tree. If no value is found, returns `nil`.
-  """
-  @spec get(term()) :: term()
-  def get(key) do
-    case Process.get(key) do
-      nil ->
-        ancestor_value(key, self(), dictionary_ancestors(self()))
-
-      value ->
-        value
-    end
-  end
-
-  @doc """
   Starting with the calling process, recursively looks for a value for `key` in the
   process dictionaries of the calling process and its known ancestors.
 
@@ -63,12 +41,13 @@ defmodule ProcessTree do
   value = ProcessTree.get(:some_key, default: default_value)
   ```
   """
-  @spec get(term(), default: term()) :: term()
-  def get(key, default: default_value) do
-    case get(key) do
+  @spec get(term(), keyword()) :: term()
+  def get(key, opts \\ []) do
+    case actually_get(key, opts) do
       nil ->
-        Process.put(key, default_value)
-        default_value
+        cache_result? = !(opts[:cache] == false)
+        if cache_result? && (opts[:default] != nil), do: Process.put(key, opts[:default])
+        opts[:default]
 
       value ->
         value
@@ -126,6 +105,16 @@ defmodule ProcessTree do
     case Process.whereis(:init) do
       ^pid -> :undefined
       _ -> ancestor(pid, 1)
+    end
+  end
+
+  defp actually_get(key, opts) do
+    case Process.get(key) do
+      nil ->
+        ancestor_value(key, self(), dictionary_ancestors(self()), opts[:cache])
+
+      value ->
+        value
     end
   end
 
@@ -200,20 +189,20 @@ defmodule ProcessTree do
     defp process_info_parent(_pid), do: nil
   end
 
-  @spec ancestor_value(term(), id(), [id()]) :: term()
-  defp ancestor_value(key, pid_or_name, dictionary_ancestors) do
+  @spec ancestor_value(term(), id(), [id()], boolean) :: term()
+  defp ancestor_value(key, pid_or_name, dictionary_ancestors, cache?) do
     cond do
       (value = get_dictionary_value(pid_or_name, key)) != nil ->
-        Process.put(key, value)
+        if cache?, do: Process.put(key, value)
         value
 
       (parent = process_info_parent(pid_or_name)) != nil ->
         older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
-        ancestor_value(key, parent, older_dictionary_ancestors)
+        ancestor_value(key, parent, older_dictionary_ancestors, cache?)
 
       length(dictionary_ancestors) > 0 ->
         [parent | older_ancestors] = dictionary_ancestors
-        ancestor_value(key, parent, older_ancestors)
+        ancestor_value(key, parent, older_ancestors, cache?)
 
       true ->
         nil

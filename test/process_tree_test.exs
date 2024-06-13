@@ -293,6 +293,28 @@ defmodule ProcessTreeTest do
       assert Process.get(:foo) == :bar
     end
 
+    test "when called with `cache: false`, it does not cache the found value at any level" do
+
+      [
+        start_task(self(), :gen1),
+        start_task(self(), :gen2),
+        start_task(self(), :gen3)
+      ]
+      |> execute()
+
+      Process.put(:foo, :bar)
+
+      assert dict_value(:gen1, :foo, false) == :bar
+      assert dict_value(:gen2, :foo, false) == :bar
+      assert dict_value(:gen3, :foo, false) == :bar
+
+      Process.put(:foo, :something_else)
+
+      assert dict_value(:gen1, :foo) == :something_else
+      assert dict_value(:gen2, :foo) == :something_else
+      assert dict_value(:gen3, :foo) == :something_else
+    end
+
     test "supports arbitrary keys" do
       Process.put({:some, :disparate, :key}, :bar)
 
@@ -307,10 +329,10 @@ defmodule ProcessTreeTest do
     (prefix <> Atom.to_string(pid_name)) |> String.to_atom()
   end
 
-  @spec dict_value(atom(), atom()) :: any()
-  defp dict_value(pid_name, dict_key) do
+  @spec dict_value(atom(), atom(), boolean()) :: any()
+  defp dict_value(pid_name, dict_key, cache_result? \\ true) do
     pid = pid(pid_name)
-    send(pid, {:dict_value, dict_key})
+    send(pid, {:dict_value, dict_key, cache_result?})
 
     full_name = full_name(pid_name)
 
@@ -487,8 +509,8 @@ defmodule ProcessTreeTest do
 
   defp receive_command(test_pid, full_name) do
     receive do
-      {:dict_value, dict_key} ->
-        value = ProcessTree.get(dict_key)
+      {:dict_value, dict_key, cache_result?} ->
+        value = ProcessTree.get(dict_key, cache: cache_result?)
         send(test_pid, {full_name, :dict_value, value})
         receive_command(test_pid, full_name)
 

@@ -32,8 +32,8 @@ defmodule TestGenserver do
     {:reply, :ok, state}
   end
 
-  def handle_info({:dict_value, dict_key}, state) do
-    value = ProcessTree.get(dict_key)
+  def handle_info({:dict_value, dict_key, cache_result}, state) do
+    value = ProcessTree.get(dict_key, cache: cache_result)
     send(state.test_pid, {state.name, :dict_value, value})
     {:noreply, state}
   end
