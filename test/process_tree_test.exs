@@ -277,14 +277,6 @@ defmodule ProcessTreeTest do
       assert dict_value(:task, :foo) == :bar
     end
 
-    test "when a value is not found, it 'caches' the default value in the calling process's dictionary" do
-      assert Process.get(:foo) == nil
-
-      assert ProcessTree.get(:foo, default: :bar) == :bar
-
-      assert Process.get(:foo) == :bar
-    end
-
     test "when a value is found, it ignores the default value" do
       Process.put(:foo, :bar)
 
@@ -293,12 +285,46 @@ defmodule ProcessTreeTest do
       assert Process.get(:foo) == :bar
     end
 
-    test "when called with `cache: false`, it does not cache the found value at any level" do
+
+    test "when a value is not found, it 'caches' the default value in the calling process's dictionary" do
+      assert Process.get(:foo) == nil
+
+      assert ProcessTree.get(:foo, default: :bar) == :bar
+
+      assert Process.get(:foo) == :bar
+    end
+
+    test "when `cache: false`, the default value is not cached" do
+      assert Process.get(:foo) == nil
+
+      assert ProcessTree.get(:foo, default: :bar, cache: false) == :bar
+
+      assert Process.get(:foo) == nil
+    end
+
+    test "by default, it caches the result" do
+      [
+        start_task(self(), :gen1),
+        start_task(self(), :gen2)
+      ]
+      |> execute()
+
+      Process.put(:foo, :bar)
+
+      assert dict_value(:gen1, :foo) == :bar
+      assert dict_value(:gen2, :foo) == :bar
+
+      Process.put(:foo, :something_else)
+
+      assert dict_value(:gen1, :foo) == :bar
+      assert dict_value(:gen2, :foo) == :bar
+    end
+
+    test "when `cache: false`, it does not cache the result" do
 
       [
         start_task(self(), :gen1),
-        start_task(self(), :gen2),
-        start_task(self(), :gen3)
+        start_task(self(), :gen2)
       ]
       |> execute()
 
@@ -306,13 +332,11 @@ defmodule ProcessTreeTest do
 
       assert dict_value(:gen1, :foo, false) == :bar
       assert dict_value(:gen2, :foo, false) == :bar
-      assert dict_value(:gen3, :foo, false) == :bar
 
       Process.put(:foo, :something_else)
 
-      assert dict_value(:gen1, :foo) == :something_else
-      assert dict_value(:gen2, :foo) == :something_else
-      assert dict_value(:gen3, :foo) == :something_else
+      assert dict_value(:gen1, :foo, false) == :something_else
+      assert dict_value(:gen2, :foo, false) == :something_else
     end
 
     test "supports arbitrary keys" do

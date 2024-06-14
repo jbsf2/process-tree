@@ -9,13 +9,13 @@
 
 It's common in Elixir apps to rely on global references or global variables for locating application services or configuration parameters. This presents problems when we test our code. We need to work around our global data, for example by setting/resetting environment variables and using `async: false`.
 
-`ProcessTree` solves the problem by localizing data to a particular branch of the Elixir process tree. When testing with ExUnit, each ExUnit test process, and all processes spawned by the test process, can use `get/1` or `get/2` to see their own private copy of the data of interest.
+`ProcessTree` solves the problem by localizing data to a particular branch of the Elixir process tree. When testing with ExUnit, each ExUnit test process, and all processes spawned by the test process, can use `get/2` to see their own private copy of the data of interest.
 
 ## How to use `get()`
 
-`get/1` and `get/2` can be used to make child processes "see" values stored in the process dictionaries of their ancestor processes. This is useful, for example, in ExUnit tests that spawn processes, such as tests that start LiveViews and GenServers.
+`get/2` can be used to make child processes "see" values stored in the process dictionaries of their ancestor processes. This is useful, for example, in ExUnit tests that spawn processes, such as tests that start LiveViews and GenServers.
 
-To make data visible to child processes via `get/1` and `get/2`, we first put the data into the process dictionary of an ancestor process - in this case, an ExUnit test pid:
+To make data visible to child processes via `get/2`, we first put the data into the process dictionary of an ancestor process - in this case, an ExUnit test pid:
 
 ``` elixir
 test "some test that starts a GenServer" do

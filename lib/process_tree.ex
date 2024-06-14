@@ -26,27 +26,35 @@ defmodule ProcessTree do
 
   If a particular ancestor process has died, it looks up to the next ancestor, if possible.
 
-  If a non-nil value is found in the tree, the value is cached in the dictionary of
-  the calling process.
+  Returns the first non-nil value found in the tree. If no value is found, returns `nil`.
 
-  Returns the first non-nil value found in the tree.
+  By default, if a non-nil value is found in the tree, the value is cached in the dictionaries
+  of the calling process and any intermediate processes traversed in the search. Thereafter,
+  subsequent calls to `get()` with the same key will return the cached value. This behavior
+  can be disabled by passing `cache: false` as an option.
 
-  If no value is found, the provided default value is cached in the dictionary of the
-  calling process and then returned.
+  ## Options
 
-  Default values might typically be read from the Application environment. For example:
+  * `:cache` - If `false`, the value found in the tree will not be cached in the dictionaries
+    of the calling process or any intermediate processes traversed in the search. Defaults to `true`.
 
-  ```
-  default_value = Application.get_env(:my_app, :some_key)
-  value = ProcessTree.get(:some_key, default: default_value)
-  ```
+  * `:default` - When no value is found in the tree, `get()` will return the default value
+    if one is provided. If caching is enabled, the default value will be cached in the
+    dictionary of the calling process.
+
+    Default values might typically be read from the Application environment. For example:
+
+    ```
+    default_value = Application.get_env(:my_app, :some_key)
+    value = ProcessTree.get(:some_key, default: default_value)
+    ```
   """
   @spec get(term(), keyword()) :: term()
   def get(key, opts \\ []) do
-    case actually_get(key, opts) do
+    cache_result? = opts[:cache] != false
+    case actually_get(key, cache_result?) do
       nil ->
-        cache_result? = !(opts[:cache] == false)
-        if cache_result? && (opts[:default] != nil), do: Process.put(key, opts[:default])
+        if cache_result? && Keyword.has_key?(opts, :default), do: Process.put(key, opts[:default])
         opts[:default]
 
       value ->
@@ -108,10 +116,11 @@ defmodule ProcessTree do
     end
   end
 
-  defp actually_get(key, opts) do
+  @spec actually_get(term(), boolean) :: term()
+  defp actually_get(key, cache_result?) do
     case Process.get(key) do
       nil ->
-        ancestor_value(key, self(), dictionary_ancestors(self()), opts[:cache])
+        ancestor_value(key, self(), dictionary_ancestors(self()), cache_result?)
 
       value ->
         value
@@ -190,19 +199,19 @@ defmodule ProcessTree do
   end
 
   @spec ancestor_value(term(), id(), [id()], boolean) :: term()
-  defp ancestor_value(key, pid_or_name, dictionary_ancestors, cache?) do
+  defp ancestor_value(key, pid_or_name, dictionary_ancestors, cache_result?) do
     cond do
       (value = get_dictionary_value(pid_or_name, key)) != nil ->
-        if cache?, do: Process.put(key, value)
+        if cache_result?, do: Process.put(key, value)
         value
 
       (parent = process_info_parent(pid_or_name)) != nil ->
         older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
-        ancestor_value(key, parent, older_dictionary_ancestors, cache?)
+        ancestor_value(key, parent, older_dictionary_ancestors, cache_result?)
 
       length(dictionary_ancestors) > 0 ->
         [parent | older_ancestors] = dictionary_ancestors
-        ancestor_value(key, parent, older_ancestors, cache?)
+        ancestor_value(key, parent, older_ancestors, cache_result?)
 
       true ->
         nil
