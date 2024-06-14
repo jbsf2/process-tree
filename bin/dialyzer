@@ -1,14 +1,76 @@
-#! /bin/bash
+#!/bin/bash
 
-bin/elixir14 \
-  && bin/dialyzer24 \
-  && bin/dialyzer25 \
-  && bin/dialyzer26 \
-  && bin/elixir15 \
-  && bin/dialyzer24 \
-  && bin/dialyzer25 \
-  && bin/dialyzer26 \
-  && bin/elixir16 \
-  && bin/dialyzer24 \
-  && bin/dialyzer25 \
-  && bin/dialyzer26
+set -euxo pipefail
+
+asdf local erlang 24.3.4.14
+asdf local elixir 1.14.5-otp-24
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 25.3.2.7
+asdf local elixir 1.14.5-otp-25
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 26.0
+asdf local elixir 1.14.5-otp-26
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 24.3.4.14
+asdf local elixir 1.15.8-otp-24
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 25.3.2.7
+asdf local elixir 1.15.8-otp-25
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 26.0
+asdf local elixir 1.15.8-otp-26
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 24.3.4.14
+asdf local elixir 1.16.3-otp-24
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 25.3.2.7
+asdf local elixir 1.16.3-otp-25
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 26.0
+asdf local elixir 1.16.3-otp-26
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 25.3.2.7
+asdf local elixir 1.17.0-otp-25
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 26.0
+asdf local elixir 1.17.0-otp-26
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+
+asdf local erlang 27.0
+asdf local elixir 1.17.0-otp-27
+rm -rf _build
+mix local.hex --force
+mix dialyzer
+

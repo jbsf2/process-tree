@@ -1,5 +1,0 @@
-#! /bin/bash
-
-bin/otp25 \
-  && mix local.hex --force \
-  && mix test

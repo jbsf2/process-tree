@@ -16,7 +16,7 @@ defmodule ProcessTree do
   if !OtpRelease.process_info_tracks_parent?() do
     # suppress warnings seen in OTP 24 and earlier
     @dialyzer {:no_match, {:known_ancestors, 3}}
-    @dialyzer {:no_match, {:ancestor_value, 3}}
+    @dialyzer {:no_match, {:ancestor_value, 4}}
     @dialyzer {:no_unused, {:older_dictionary_ancestors, 2}}
   end
 
@@ -226,19 +226,34 @@ defmodule ProcessTree do
     nil
   end
 
-  defp get_dictionary_value(pid, key) do
-    case Process.info(pid, :dictionary) do
-      nil ->
-        nil
+  if OtpRelease.optimized_dictionary_access?() do
+    defp get_dictionary_value(pid, key) do
+      case Process.info(pid, {:dictionary, key}) do
+        {{:dictionary, ^key}, :undefined} ->
+          nil
 
-      {:dictionary, dictionary} ->
-        case List.keyfind(dictionary, key, 0) do
-          {_key, value} ->
-            value
+        {{:dictionary, ^key}, value} ->
+          value
 
-          nil ->
-            nil
-        end
+        nil ->
+          nil
+      end
+    end
+  else
+    defp get_dictionary_value(pid, key) do
+      case Process.info(pid, :dictionary) do
+        nil ->
+          nil
+
+        {:dictionary, dictionary} ->
+          case List.keyfind(dictionary, key, 0) do
+            {_key, value} ->
+              value
+
+            nil ->
+              nil
+          end
+      end
     end
   end
 
