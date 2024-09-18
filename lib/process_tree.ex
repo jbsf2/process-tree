@@ -120,7 +120,8 @@ defmodule ProcessTree do
   defp actually_get(key, cache_result?) do
     case Process.get(key) do
       nil ->
-        ancestor_value(key, self(), dictionary_ancestors(self()), cache_result?)
+        ancestor_value(key, self(), dictionary_ancestors(self()), cache_result?) ||
+          caller_value(key, self(), dictionary_callers(self()), cache_result?)
 
       value ->
         value
@@ -218,6 +219,23 @@ defmodule ProcessTree do
     end
   end
 
+  defp caller_value(key, pid_or_name, dictionary_callers, cache_result?) do
+    cond do
+      (value = get_dictionary_value(pid_or_name, key)) != nil ->
+        if cache_result?, do: Process.put(key, value)
+        value
+
+      true ->
+        case dictionary_callers do
+          [] ->
+            nil
+
+          [pid | older_dictionary_callers] ->
+            caller_value(key, pid, older_dictionary_callers, cache_result?)
+        end
+    end
+  end
+
   @spec get_dictionary_value(id(), atom()) :: term()
   defp get_dictionary_value(nil, _key), do: nil
 
@@ -260,6 +278,12 @@ defmodule ProcessTree do
   defp dictionary_ancestors(pid) do
     (get_dictionary_value(pid, :"$ancestors") || [])
     |> Enum.map(&get_pid_if_available/1)
+  end
+
+  defp dictionary_callers(pid) do
+    (get_dictionary_value(pid, :"$callers") || [])
+    |> Enum.map(&get_pid_if_available/1)
+    |> IO.inspect(label: "callers (process_tree.ex:304)")
   end
 
   @spec get_pid_if_available(pid() | atom()) :: pid() | atom()
