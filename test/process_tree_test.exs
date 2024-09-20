@@ -348,6 +348,24 @@ defmodule ProcessTreeTest do
     end
   end
 
+  describe "$callers" do
+    test "$callers test" do
+      dbg(self())
+
+      {:ok, supervisor} = Task.Supervisor.start_link()
+
+      Task.Supervisor.async_nolink(supervisor, fn ->
+        dbg(Process.get(:"$callers"))
+        parent = ProcessTree.parent(self())
+        dbg(parent)
+        grandparent = ProcessTree.parent(parent)
+        dbg(grandparent)
+      end)
+
+      :timer.sleep 1000
+    end
+  end
+
   defp full_name(pid_name) do
     prefix = Process.get(:process_name_prefix)
     (prefix <> Atom.to_string(pid_name)) |> String.to_atom()
