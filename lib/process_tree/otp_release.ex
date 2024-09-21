@@ -25,7 +25,7 @@ defmodule ProcessTree.OtpRelease do
           Process.info(self(), {:dictionary, :foo})
           true
         rescue
-          _  -> false
+          _ -> false
         end
     end
   end

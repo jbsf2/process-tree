@@ -57,19 +57,19 @@ mix local.hex --force
 mix dialyzer
 
 asdf local erlang 25.3.2.7
-asdf local elixir 1.17.0-otp-25
+asdf local elixir 1.17.3-otp-25
 rm -rf _build
 mix local.hex --force
 mix dialyzer
 
 asdf local erlang 26.0
-asdf local elixir 1.17.0-otp-26
+asdf local elixir 1.17.3-otp-26
 rm -rf _build
 mix local.hex --force
 mix dialyzer
 
 asdf local erlang 27.0
-asdf local elixir 1.17.0-otp-27
+asdf local elixir 1.17.3-otp-27
 rm -rf _build
 mix local.hex --force
 mix dialyzer

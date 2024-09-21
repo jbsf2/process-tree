@@ -14,9 +14,9 @@ defmodule ScriptBuilder do
       {erlang_build("25"), "1.16.3-otp-25"},
       {erlang_build("26"), "1.16.3-otp-26"},
 
-      {erlang_build("25"), "1.17.0-otp-25"},
-      {erlang_build("26"), "1.17.0-otp-26"},
-      {erlang_build("27"), "1.17.0-otp-27"},
+      {erlang_build("25"), "1.17.3-otp-25"},
+      {erlang_build("26"), "1.17.3-otp-26"},
+      {erlang_build("27"), "1.17.3-otp-27"},
     ]
   end
 
@@ -68,4 +68,4 @@ defmodule ScriptBuilder do
   end
 end
 
-ScriptBuilder.dialyzer_commands()
+ScriptBuilder.test_commands()

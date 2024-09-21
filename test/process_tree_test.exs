@@ -4,6 +4,17 @@ defmodule ProcessTreeTest do
 
   alias ProcessTree.OtpRelease
 
+  setup_all context do
+    {:ok, supervisor} = Task.Supervisor.start_link()
+    {:ok, supervisor2} = Task.Supervisor.start_link()
+    {:ok, supervisor3} = Task.Supervisor.start_link()
+
+    context
+    |> Map.put(:supervisor, supervisor)
+    |> Map.put(:supervisor2, supervisor2)
+    |> Map.put(:supervisor3, supervisor3)
+  end
+
   setup context do
     line = Map.get(context, :line) |> Integer.to_string()
     Process.put(:process_name_prefix, line <> "-")
@@ -17,7 +28,6 @@ defmodule ProcessTreeTest do
     end
 
     test "standard supervision tree" do
-
       [
         start_supervisor(self(), :gen1),
         link_supervisor(self(), :gen2),
@@ -27,16 +37,16 @@ defmodule ProcessTreeTest do
       |> execute()
 
       assert dict_value(:gen4, :foo) == :bar
+
       assert ancestors(:gen4, 4) == [
-        pid(:gen3),
-        pid(:gen2),
-        pid(:gen1),
-        self()
-      ]
+               pid(:gen3),
+               pid(:gen2),
+               pid(:gen1),
+               self()
+             ]
     end
 
     test "standard supervision tree, after supervisor restarts" do
-
       [
         start_supervisor(self(), :gen1),
         link_supervisor(self(), :gen2),
@@ -51,12 +61,13 @@ defmodule ProcessTreeTest do
 
       assert new_pid != original_pid
       assert dict_value(:gen4, :foo) == :bar
+
       assert ancestors(:gen4, 4) == [
-        pid(:gen3),
-        pid(:gen2),
-        pid(:gen1),
-        self()
-      ]
+               pid(:gen3),
+               pid(:gen2),
+               pid(:gen1),
+               self()
+             ]
     end
 
     test "with a single dead $ancestor" do
@@ -123,6 +134,7 @@ defmodule ProcessTreeTest do
               self()
             ]
         end
+
       assert ancestors(:gen4, 4) == expected_ancestors
     end
 
@@ -147,11 +159,11 @@ defmodule ProcessTreeTest do
       assert dict_value(:gen4, :foo) == :bar
 
       assert ancestors(:gen4, 4) == [
-        expected_parent,
-        full_name(:gen2),
-        pid(:gen1),
-        self()
-      ]
+               expected_parent,
+               full_name(:gen2),
+               pid(:gen1),
+               self()
+             ]
     end
 
     @tag :otp25_or_later
@@ -180,11 +192,12 @@ defmodule ProcessTreeTest do
       |> execute()
 
       assert dict_value(:gen3, :foo) == :bar
+
       assert ancestors(:gen3, 3) == [
-        pid(:gen2),
-        pid(:gen1),
-        self()
-      ]
+               pid(:gen2),
+               pid(:gen1),
+               self()
+             ]
     end
 
     @tag :pre_otp25
@@ -224,11 +237,12 @@ defmodule ProcessTreeTest do
       |> execute()
 
       assert dict_value(:gen3, :foo) == :bar
+
       assert ancestors(:gen3, 3) == [
-        pid(:gen2),
-        pid(:gen1),
-        self()
-      ]
+               pid(:gen2),
+               pid(:gen1),
+               self()
+             ]
     end
   end
 
@@ -285,7 +299,6 @@ defmodule ProcessTreeTest do
       assert Process.get(:foo) == :bar
     end
 
-
     test "when a value is not found, it 'caches' the default value in the calling process's dictionary" do
       assert Process.get(:foo) == nil
 
@@ -321,7 +334,6 @@ defmodule ProcessTreeTest do
     end
 
     test "when `cache: false`, it does not cache the result" do
-
       [
         start_task(self(), :gen1),
         start_task(self(), :gen2)
@@ -348,27 +360,120 @@ defmodule ProcessTreeTest do
     end
   end
 
-  describe "$callers" do
-    test "$callers test" do
-      dbg(self())
+  describe "using $callers" do
+    test "when the first caller has the dictionary key", %{supervisor: supervisor} do
+      Process.put(:foo, :bar)
+      exunit_pid = self()
 
-      {:ok, supervisor} = Task.Supervisor.start_link()
+      task =
+        Task.Supervisor.async_nolink(supervisor, fn ->
+          assert !ancestor?(self(), exunit_pid)
+          assert ProcessTree.get(:foo) == :bar
+        end)
 
-      Task.Supervisor.async_nolink(supervisor, fn ->
-        dbg(Process.get(:"$callers"))
-        parent = ProcessTree.parent(self())
-        dbg(parent)
-        grandparent = ProcessTree.parent(parent)
-        dbg(grandparent)
-      end)
+      Task.await(task, 1000)
+    end
 
-      :timer.sleep 1000
+    test "when the first caller doesn't have the key but one of its non-caller ancestors does", %{
+      supervisor: supervisor
+    } do
+      Process.put(:foo, :bar)
+
+      [
+        start_task(self(), :gen1),
+        start_task(self(), :gen2),
+        start_task(self(), :gen3),
+        supervise_task(self(), supervisor, :gen4)
+      ]
+      |> execute()
+
+      # sanity check
+      assert !ancestor?(:gen4, self())
+      assert ancestor?(caller(:gen4), self())
+
+      assert dict_value(:gen4, :foo) == :bar
+    end
+
+    test "prefers the ancestors of callers over the the callers of callers", %{
+      supervisor: supervisor_not_started_by_test_pid
+    } do
+      Process.put(:foo, :bar)
+
+      {:ok, supervisor_started_by_test_pid} = Task.Supervisor.start_link()
+
+      [
+        start_task(self(), :gen1),
+        supervise_task(self(), supervisor_started_by_test_pid, :gen2),
+        start_task(self(), :gen3),
+        supervise_task(self(), supervisor_not_started_by_test_pid, :gen4)
+      ]
+      |> execute()
+
+      set_dict_value(:gen1, :foo, :not_bar)
+
+      # sanity check
+      assert ancestor?(:gen2, self())
+      assert !ancestor?(:gen2, :gen1)
+      assert caller(:gen2) == pid(:gen1)
+      assert dict_value(:gen1, :foo) == :not_bar
+
+      assert dict_value(:gen4, :foo) == :bar
+    end
+
+    test "layers of callers", context do
+      Process.put(:foo, :bar)
+
+      supervisor1 = context[:supervisor]
+      supervisor2 = context[:supervisor2]
+      supervisor3 = context[:supervisor3]
+
+      [
+        supervise_task(self(), supervisor1, :gen1),
+        supervise_task(self(), supervisor2, :gen2),
+        supervise_task(self(), supervisor3, :gen3)
+      ]
+      |> execute()
+
+      # sanity check
+      assert !ancestor?(:gen3, self())
+      assert caller?(:gen3, self())
+
+      assert dict_value(:gen3, :foo) == :bar
     end
   end
 
+  @spec full_name(atom()) :: atom()
   defp full_name(pid_name) do
     prefix = Process.get(:process_name_prefix)
     (prefix <> Atom.to_string(pid_name)) |> String.to_atom()
+  end
+
+  @spec ancestor?(pid() | atom(), pid() | atom()) :: boolean()
+  defp ancestor?(descendent, potential_ancestor) do
+    descendent_pid = pid(descendent)
+    ancestor_pid = pid(potential_ancestor)
+    ancestors(descendent_pid) |> Enum.member?(ancestor_pid)
+  end
+
+  @spec ancestors(pid()) :: [pid() | atom()]
+  defp ancestors(pid) do
+    ProcessTree.known_ancestors(pid)
+  end
+
+  @spec caller(atom()) :: pid() | nil
+  defp caller(pid_name) do
+    dict_value(pid_name, :"$callers") |> hd()
+  end
+
+  @spec callers(atom()) :: [pid()] | nil
+  defp callers(pid_name) do
+    dict_value(pid_name, :"$callers")
+  end
+
+  @spec caller?(atom(), pid() | atom()) :: boolean()
+  defp caller?(descendent_name, potential_ancestor) do
+    ancestor_pid = pid(potential_ancestor)
+    callers(descendent_name) |> Enum.member?(ancestor_pid)
   end
 
   @spec dict_value(atom(), atom(), boolean()) :: any()
@@ -384,9 +489,16 @@ defmodule ProcessTreeTest do
     end
   end
 
+  @spec set_dict_value(atom(), atom(), any()) :: any()
+  defp set_dict_value(pid_name, key, value) do
+    pid = pid(pid_name)
+    send(pid, {:set_dict_value, key, value})
+  end
+
   @spec ancestors(atom(), pos_integer()) :: [pid()]
   defp ancestors(pid_name, ancestor_count) do
     pid = pid(pid_name)
+
     ProcessTree.known_ancestors(pid)
     |> Enum.take(ancestor_count)
   end
@@ -429,7 +541,11 @@ defmodule ProcessTreeTest do
     end)
   end
 
-  @spec pid(atom()) :: pid()
+  @spec pid(pid() | atom()) :: pid()
+  defp pid(pid) when is_pid(pid) do
+    pid
+  end
+
   defp pid(pid_name) do
     full_name = full_name(pid_name)
     registered_pid = Process.whereis(full_name)
@@ -465,6 +581,14 @@ defmodule ProcessTreeTest do
   @spec start_task(pid(), atom()) :: nestable_function()
   defp start_task(test_pid, this_pid_name) do
     nestable_function(test_pid, this_pid_name, &Task.start/1)
+  end
+
+  @spec supervise_task(pid(), pid(), atom()) :: nestable_function()
+  defp supervise_task(test_pid, supervisor, this_pid_name) do
+    nestable_function(test_pid, this_pid_name, fn function ->
+      task = Task.Supervisor.async_nolink(supervisor, function)
+      {:ok, task.pid}
+    end)
   end
 
   @spec spawn_process(pid(), atom()) :: nestable_function()
@@ -554,6 +678,10 @@ defmodule ProcessTreeTest do
       {:dict_value, dict_key, cache_result?} ->
         value = ProcessTree.get(dict_key, cache: cache_result?)
         send(test_pid, {full_name, :dict_value, value})
+        receive_command(test_pid, full_name)
+
+      {:set_dict_value, key, value} ->
+        Process.put(key, value)
         receive_command(test_pid, full_name)
 
       :exit ->

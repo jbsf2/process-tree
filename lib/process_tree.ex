@@ -16,7 +16,7 @@ defmodule ProcessTree do
   if !OtpRelease.process_info_tracks_parent?() do
     # suppress warnings seen in OTP 24 and earlier
     @dialyzer {:no_match, {:known_ancestors, 3}}
-    @dialyzer {:no_match, {:ancestor_value, 4}}
+    @dialyzer {:no_match, {:try_parent, 4}}
     @dialyzer {:no_unused, {:older_dictionary_ancestors, 2}}
   end
 
@@ -52,7 +52,8 @@ defmodule ProcessTree do
   @spec get(term(), keyword()) :: term()
   def get(key, opts \\ []) do
     cache_result? = opts[:cache] != false
-    case actually_get(key, cache_result?) do
+
+    case actually_get(key, self(), dictionary_ancestors(self()), cache_result?) do
       nil ->
         if cache_result? && Keyword.has_key?(opts, :default), do: Process.put(key, opts[:default])
         opts[:default]
@@ -116,17 +117,54 @@ defmodule ProcessTree do
     end
   end
 
-  @spec actually_get(term(), boolean) :: term()
-  defp actually_get(key, cache_result?) do
-    case Process.get(key) do
-      nil ->
-        ancestor_value(key, self(), dictionary_ancestors(self()), cache_result?)
-
-      value ->
+  @spec actually_get(term(), id(), [id()], boolean) :: term()
+  defp actually_get(key, pid_or_name, dictionary_ancestors, cache_result?) do
+    cond do
+      (value = get_dictionary_value(pid_or_name, key)) != nil ->
+        if cache_result?, do: Process.put(key, value)
         value
+
+      (value = try_parent(key, pid_or_name, dictionary_ancestors, cache_result?)) != nil ->
+        if cache_result?, do: Process.put(key, value)
+        value
+
+      (value = try_caller(key, pid_or_name, cache_result?)) != nil ->
+        if cache_result?, do: Process.put(key, value)
+        value
+
+      true ->
+        nil
     end
   end
 
+  @spec try_parent(term(), id(), [id()], boolean) :: term()
+  defp try_parent(key, pid_or_name, dictionary_ancestors, cache_result?) do
+    cond do
+      (parent = process_info_parent(pid_or_name)) != nil ->
+        older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
+        actually_get(key, parent, older_dictionary_ancestors, cache_result?)
+
+      length(dictionary_ancestors) > 0 ->
+        [parent | older_ancestors] = dictionary_ancestors
+        actually_get(key, parent, older_ancestors, cache_result?)
+
+      true ->
+        nil
+    end
+  end
+
+  @spec try_caller(term(), id(), boolean) :: term()
+  defp try_caller(key, pid_or_name, cache_result?) do
+    case caller(pid_or_name) do
+      nil ->
+        nil
+
+      caller ->
+        actually_get(key, caller, dictionary_ancestors(caller), cache_result?)
+    end
+  end
+
+  @spec ancestor(pid(), non_neg_integer()) :: pid() | atom()
   defp ancestor(pid, index) do
     ancestors = known_ancestors(pid)
 
@@ -136,6 +174,20 @@ defmodule ProcessTree do
 
       false ->
         :unknown
+    end
+  end
+
+  @spec caller(id()) :: pid() | nil
+  defp caller(pid_or_name) do
+    maybe_pid = get_pid_if_available(pid_or_name)
+    callers = get_dictionary_value(maybe_pid, :"$callers")
+
+    case callers do
+      nil ->
+        nil
+
+      callers ->
+        hd(callers)
     end
   end
 
@@ -177,12 +229,9 @@ defmodule ProcessTree do
   end
 
   @spec process_info_parent(id()) :: pid() | nil
-  defp process_info_parent(name) when is_atom(name) do
-    nil
-  end
 
   if OtpRelease.process_info_tracks_parent?() do
-    defp process_info_parent(pid) do
+    defp process_info_parent(pid) when is_pid(pid) do
       case Process.info(pid, :parent) do
         {:parent, :undefined} ->
           nil
@@ -194,28 +243,12 @@ defmodule ProcessTree do
           nil
       end
     end
+
+    defp process_info_parent(name) when is_atom(name) do
+      nil
+    end
   else
     defp process_info_parent(_pid), do: nil
-  end
-
-  @spec ancestor_value(term(), id(), [id()], boolean) :: term()
-  defp ancestor_value(key, pid_or_name, dictionary_ancestors, cache_result?) do
-    cond do
-      (value = get_dictionary_value(pid_or_name, key)) != nil ->
-        if cache_result?, do: Process.put(key, value)
-        value
-
-      (parent = process_info_parent(pid_or_name)) != nil ->
-        older_dictionary_ancestors = older_dictionary_ancestors(parent, dictionary_ancestors)
-        ancestor_value(key, parent, older_dictionary_ancestors, cache_result?)
-
-      length(dictionary_ancestors) > 0 ->
-        [parent | older_ancestors] = dictionary_ancestors
-        ancestor_value(key, parent, older_ancestors, cache_result?)
-
-      true ->
-        nil
-    end
   end
 
   @spec get_dictionary_value(id(), atom()) :: term()
@@ -257,6 +290,7 @@ defmodule ProcessTree do
     end
   end
 
+  @spec dictionary_ancestors(pid()) :: [pid() | atom()]
   defp dictionary_ancestors(pid) do
     (get_dictionary_value(pid, :"$ancestors") || [])
     |> Enum.map(&get_pid_if_available/1)
