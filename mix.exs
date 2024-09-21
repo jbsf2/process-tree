@@ -46,7 +46,7 @@ defmodule ProcessTree.MixProject do
         "examples/environment-variable-example.md"
       ],
       groups_for_extras: [
-        "Examples": ["examples/environment-variable-example.md"]
+        Examples: ["examples/environment-variable-example.md"]
       ],
       main: "ProcessTree",
       source_ref: "v#{@version}"
