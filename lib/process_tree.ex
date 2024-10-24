@@ -251,7 +251,7 @@ defmodule ProcessTree do
     defp process_info_parent(_pid), do: nil
   end
 
-  @spec get_dictionary_value(id(), atom()) :: term()
+  @spec get_dictionary_value(id(), term()) :: term()
   defp get_dictionary_value(nil, _key), do: nil
 
   defp get_dictionary_value(name, _key) when is_atom(name) do
