@@ -22,7 +22,7 @@ defmodule ProcessTree do
 
   @doc """
   Starting with the calling process, recursively looks for a value for `key` in the
-  process dictionaries of the calling process and its known ancestors.
+  process dictionaries of the calling process and its known ancestors/callers.
 
   If a particular ancestor process has died, it looks up to the next ancestor, if possible.
 
@@ -32,6 +32,23 @@ defmodule ProcessTree do
   of the calling process and any intermediate processes traversed in the search. Thereafter,
   subsequent calls to `get()` with the same key will return the cached value. This behavior
   can be disabled by passing `cache: false` as an option.
+
+  ## parents, `$ancestors` and `$callers`
+
+  Erlang provides [two mechanisms](https://saltycrackers.dev/posts/how-to-get-the-parent-of-an-elixir-process/)
+  for finding the ancestors of a process: `:erlang.process_info(pid, :parent)`, available
+  since OTP 25, and the `$ancestors` process dictionary key, which only applies to processes
+  managed by OTP.
+
+  In addition to these, Elixir uses the [`$callers`](https://hexdocs.pm/elixir/Task.html#module-ancestor-and-caller-tracking)
+  dictionary key to track the chain of processes that initiate a supervised task.
+
+  `get/2` considers all three mechanisms when navigating the ancestry of a process. Priority is first
+  given to the parent/`$ancestors` hierarchy. Given a process and a key, if neither the process itself
+  nor any parents/`$ancestors` have a dictionary value for the key, `get/2` asks the process if it has
+  any `$callers`. If it does, `get/2` will look up to the first caller, look in its dictionary, then
+  if necessary examine the caller's parents/`$ancestors` and `$callers`, with priority again given to
+  the parent/`$ancestors` hierarchy.
 
   ## Options
 
