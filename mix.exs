@@ -1,7 +1,7 @@
 defmodule ProcessTree.MixProject do
   use Mix.Project
 
-  @version "0.1.4"
+  @version "0.2.0"
   @github_page "https://github.com/jbsf2/process-tree"
 
   def project do
