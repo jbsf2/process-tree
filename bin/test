@@ -12,7 +12,7 @@ asdf local elixir 1.14.5-otp-25
 mix local.hex --force
 mix test
 
-asdf local erlang 26.0
+asdf local erlang 26.2.5.6
 asdf local elixir 1.14.5-otp-26
 mix local.hex --force
 mix test
@@ -27,7 +27,7 @@ asdf local elixir 1.15.8-otp-25
 mix local.hex --force
 mix test
 
-asdf local erlang 26.0
+asdf local erlang 26.2.5.6
 asdf local elixir 1.15.8-otp-26
 mix local.hex --force
 mix test
@@ -42,7 +42,7 @@ asdf local elixir 1.16.3-otp-25
 mix local.hex --force
 mix test
 
-asdf local erlang 26.0
+asdf local erlang 26.2.5.6
 asdf local elixir 1.16.3-otp-26
 mix local.hex --force
 mix test
@@ -52,13 +52,28 @@ asdf local elixir 1.17.3-otp-25
 mix local.hex --force
 mix test
 
-asdf local erlang 26.0
+asdf local erlang 26.2.5.6
 asdf local elixir 1.17.3-otp-26
 mix local.hex --force
 mix test
 
-asdf local erlang 27.0
+asdf local erlang 27.2
 asdf local elixir 1.17.3-otp-27
+mix local.hex --force
+mix test
+
+asdf local erlang 25.3.2.7
+asdf local elixir 1.18.0-otp-25
+mix local.hex --force
+mix test
+
+asdf local erlang 26.2.5.6
+asdf local elixir 1.18.0-otp-26
+mix local.hex --force
+mix test
+
+asdf local erlang 27.2
+asdf local elixir 1.18.0-otp-27
 mix local.hex --force
 mix test
 

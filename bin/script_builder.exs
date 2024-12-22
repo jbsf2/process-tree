@@ -17,6 +17,10 @@ defmodule ScriptBuilder do
       {erlang_build("25"), "1.17.3-otp-25"},
       {erlang_build("26"), "1.17.3-otp-26"},
       {erlang_build("27"), "1.17.3-otp-27"},
+
+      {erlang_build("25"), "1.18.0-otp-25"},
+      {erlang_build("26"), "1.18.0-otp-26"},
+      {erlang_build("27"), "1.18.0-otp-27"},
     ]
   end
 
@@ -29,8 +33,8 @@ defmodule ScriptBuilder do
     %{
       "24" => "24.3.4.14",
       "25" => "25.3.2.7",
-      "26" => "26.0",
-      "27" => "27.0"
+      "26" => "26.2.5.6",
+      "27" => "27.2"
     }
   end
 
