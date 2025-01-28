@@ -372,66 +372,41 @@ defmodule ProcessTreeTest do
   end
 
   describe "cross-node behaviors" do
-    test "if we encounter a remote PID, we stop walking the tree" do
-      # TODO: this requires a running EPMD, but doesnt start one
+    setup do
       {:ok, pid, _} =
         :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
 
       :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
       other_node = :peer.call(pid, :erlang, :node, [])
-      true = Node.connect(other_node)
 
-      test_pid = self()
+      %{other_node: other_node}
+    end
 
+    test "if we encounter a remote PID, we stop walking the tree", %{other_node: other_node} do
       Node.spawn_link(other_node, ClusterHelper, :apply_and_reply, [
-        test_pid,
+        self(),
         {ProcessTree, :get, [:something]}
       ])
 
       assert_receive :done
     end
 
-    test "if we encounter a remote PID from deeper in the stack, we stop walking the tree" do
-      {:ok, pid, _} =
-        :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
-
-      :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
-      other_node = :peer.call(pid, :erlang, :node, [])
-      true = Node.connect(other_node)
-
-      test_pid = self()
-
-      Node.spawn_link(other_node, ClusterHelper, :test_nested_get, [test_pid])
+    test "if we encounter a remote PID from deeper in the stack, we stop walking the tree", %{
+      other_node: other_node
+    } do
+      Node.spawn_link(other_node, ClusterHelper, :test_nested_get, [self()])
 
       assert_receive :done
     end
 
-    test "known_ancestors only includes ancestors on the local node" do
-      {:ok, pid, _} =
-        :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
-
-      :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
-      other_node = :peer.call(pid, :erlang, :node, [])
-      true = Node.connect(other_node)
-
-      test_pid = self()
-
-      Node.spawn_link(other_node, ClusterHelper, :test_ancestors, [test_pid])
+    test "known_ancestors only includes ancestors on the local node", %{other_node: other_node} do
+      Node.spawn_link(other_node, ClusterHelper, :test_ancestors, [self()])
 
       assert_receive :done
     end
 
-    test "get parent doesn't blow up" do
-      {:ok, pid, _} =
-        :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
-
-      :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
-      other_node = :peer.call(pid, :erlang, :node, [])
-      true = Node.connect(other_node)
-
-      test_pid = self()
-
-      Node.spawn_link(other_node, ClusterHelper, :test_get_parent, [test_pid])
+    test "get parent doesn't blow up", %{other_node: other_node} do
+      Node.spawn_link(other_node, ClusterHelper, :test_get_parent, [self()])
 
       assert_receive :done
     end
