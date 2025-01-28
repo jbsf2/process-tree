@@ -231,7 +231,7 @@ defmodule ProcessTree do
   end
 
   @spec init_pid() :: pid()
-  defp init_pid() do
+  def init_pid() do
     Process.whereis(:init)
   end
 

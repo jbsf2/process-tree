@@ -360,18 +360,49 @@ defmodule ProcessTreeTest do
     end
 
     test "if we encounter a remote PID, we stop walking the tree" do
+      # this requires a running EPMD, but doesnt start one
       {:ok, _} = :net_kernel.start([:process_tree_test, :shortnames])
-      {:ok, _pid, other_node} = :peer.start_link()
+#            mix_paths = Enum.map(:code.get_path(), &())
+#            |> List.flatten()
+
+#      mix_paths = Enum.map(, &(['-pa', &1]))
+#      |> Enum.reject(fn
+#        [_, '.'] -> true
+#        _ -> false
+#      end)
+#      |> dbg()
+#                  |> List.flatten()
+
+      {:ok, pid, other_node} = :peer.start(%{connection: :standard_io, args: ['-pa' | :code.get_path()]})
+      :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
+      |> dbg()
+      other_node = :peer.call(pid, :erlang, :node, [])
       true = Node.connect(other_node)
 
-      # test_pid = self()
+       test_pid = self()
 
       fun = fn -> ProcessTreeTest.hello() end
       dbg(fun)
-      Node.spawn_link(other_node, &ProcessTreeTest.hello/0)
+      # this seems to suggest we could at least reference compiled elixir functions in the local repo
+      Node.spawn_link(other_node, &ProcessTree.init_pid/0)
 
       assert_receive :done
     end
+
+#    test "start a new node with peer and inherit Mix environment" do
+#      # Get the current Mix environment paths
+#
+#      # Start a new node with the same paths and configuration
+#      node_name = :"test_node_#{:rand.uniform(1000)}@localhost"
+#      :peer.start(node_name, ['-setcookie', :erlang.get_cookie()] ++ mix_paths ++ ['-eval', 'io:format("Node started~n").'])
+#
+#      # Ensure the new node is reachable
+#      assert Node.connect(node_name)
+#
+#      # Optionally execute code on the new node
+#      Node.spawn(node_name, fn -> IO.puts("Hello from #{Node.self()}") end)
+#    end
+
 
     def hello do
       IO.puts("hello")
@@ -440,6 +471,7 @@ defmodule ProcessTreeTest do
 
     test "layers of callers", context do
       Process.put(:foo, :bar)
+
 
       supervisor1 = context[:supervisor]
       supervisor2 = context[:supervisor2]
