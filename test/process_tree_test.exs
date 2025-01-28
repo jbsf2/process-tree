@@ -358,6 +358,24 @@ defmodule ProcessTreeTest do
 
       assert Process.get({:some, :disparate, :key}) == :bar
     end
+
+    test "if we encounter a remote PID, we stop walking the tree" do
+      {:ok, _} = :net_kernel.start([:process_tree_test, :shortnames])
+      {:ok, _pid, other_node} = :peer.start_link()
+      true = Node.connect(other_node)
+
+      # test_pid = self()
+
+      fun = fn -> ProcessTreeTest.hello() end
+      dbg(fun)
+      Node.spawn_link(other_node, &ProcessTreeTest.hello/0)
+
+      assert_receive :done
+    end
+
+    def hello do
+      IO.puts("hello")
+    end
   end
 
   describe "using $callers" do

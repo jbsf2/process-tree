@@ -254,7 +254,13 @@ defmodule ProcessTree do
           nil
 
         {:parent, parent} ->
+          # is this process on the same node as me?
+          # if node(parent) == node() do
           parent
+
+        # else
+        #   nil
+        # end
 
         nil ->
           nil
