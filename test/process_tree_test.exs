@@ -5,6 +5,8 @@ defmodule ProcessTreeTest do
   alias ProcessTree.OtpRelease
 
   setup_all context do
+    {:ok, _} = :net_kernel.start([:process_tree_test, :shortnames])
+
     {:ok, supervisor} = Task.Supervisor.start_link()
     {:ok, supervisor2} = Task.Supervisor.start_link()
     {:ok, supervisor3} = Task.Supervisor.start_link()
@@ -13,6 +15,7 @@ defmodule ProcessTreeTest do
     |> Map.put(:supervisor, supervisor)
     |> Map.put(:supervisor2, supervisor2)
     |> Map.put(:supervisor3, supervisor3)
+
   end
 
   setup context do
@@ -359,9 +362,12 @@ defmodule ProcessTreeTest do
       assert Process.get({:some, :disparate, :key}) == :bar
     end
 
+  end
+
+  describe "cross-node behaviors" do
+
     test "if we encounter a remote PID, we stop walking the tree" do
       # TODO: this requires a running EPMD, but doesnt start one
-      {:ok, _} = :net_kernel.start([:process_tree_test, :shortnames])
       {:ok, pid, _} = :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
       :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
       other_node = :peer.call(pid, :erlang, :node, [])
@@ -375,24 +381,40 @@ defmodule ProcessTreeTest do
       assert_receive :done
     end
 
-#    test "start a new node with peer and inherit Mix environment" do
-#      # Get the current Mix environment paths
-#
-#      # Start a new node with the same paths and configuration
-#      node_name = :"test_node_#{:rand.uniform(1000)}@localhost"
-#      :peer.start(node_name, ['-setcookie', :erlang.get_cookie()] ++ mix_paths ++ ['-eval', 'io:format("Node started~n").'])
-#
-#      # Ensure the new node is reachable
-#      assert Node.connect(node_name)
-#
-#      # Optionally execute code on the new node
-#      Node.spawn(node_name, fn -> IO.puts("Hello from #{Node.self()}") end)
-#    end
+    test "if we encounter a remote PID from deeper in the stack, we stop walking the tree" do
+      # TODO: this requires a running EPMD, but doesnt start one
+      {:ok, pid, _} = :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
+      :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
+      other_node = :peer.call(pid, :erlang, :node, [])
+      true = Node.connect(other_node)
 
+      test_pid = self()
 
-    def hello do
-      IO.puts("hello")
+      # this seems to suggest we could at least reference compiled elixir functions in the local repo
+      Node.spawn_link(other_node, ClusterHelper, :nested_get, [test_pid])
+
+      assert_receive :done
     end
+
+    test "known_ancestors includes first remote ancestor but not its parents" do
+      {:ok, pid, _} = :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
+      :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
+      other_node = :peer.call(pid, :erlang, :node, [])
+      true = Node.connect(other_node)
+
+      test_pid = self()
+
+      # this seems to suggest we could at least reference compiled elixir functions in the local repo
+      Node.spawn_link(other_node, ClusterHelper, :ancestors, [test_pid])
+
+      receive do
+        {:done, ancestors} ->
+          dbg(ancestors)
+      end
+    end
+
+
+
   end
 
   describe "using $callers" do
