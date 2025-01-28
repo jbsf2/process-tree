@@ -231,7 +231,7 @@ defmodule ProcessTree do
   end
 
   @spec init_pid() :: pid()
-  def init_pid() do
+  defp init_pid() do
     Process.whereis(:init)
   end
 
@@ -255,12 +255,11 @@ defmodule ProcessTree do
 
         {:parent, parent} ->
           # is this process on the same node as me?
-          # if node(parent) == node() do
-          parent
-
-        # else
-        #   nil
-        # end
+           if node(parent) == node() do
+            parent
+           else
+             nil
+           end
 
         nil ->
           nil
