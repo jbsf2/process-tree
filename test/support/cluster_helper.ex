@@ -6,7 +6,7 @@ defmodule ClusterHelper do
     send(test_pid, :done)
   end
 
-  def nested_get(test_pid) do
+  def test_nested_get(test_pid) do
     Task.async(fn ->
       ProcessTree.get(:random_key)
       send(test_pid, :done)

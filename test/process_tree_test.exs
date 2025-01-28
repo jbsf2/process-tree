@@ -4,7 +4,16 @@ defmodule ProcessTreeTest do
 
   alias ProcessTree.OtpRelease
 
+  def ensure_epmd() do
+    {_, exit_code} = System.cmd("epmd", ["-names"], stderr_to_stdout: true)
+
+    if exit_code != 0 do
+      System.cmd("epmd", ["-daemon"])
+    end
+  end
+
   setup_all context do
+    ensure_epmd()
     {:ok, _} = :net_kernel.start([:process_tree_test, :shortnames])
 
     {:ok, supervisor} = Task.Supervisor.start_link()
@@ -374,7 +383,6 @@ defmodule ProcessTreeTest do
 
       test_pid = self()
 
-      # this seems to suggest we could at least reference compiled elixir functions in the local repo
       Node.spawn_link(other_node, ClusterHelper, :apply_and_reply, [
         test_pid,
         {ProcessTree, :get, [:something]}
