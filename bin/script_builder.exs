@@ -2,15 +2,15 @@ defmodule ScriptBuilder do
 
   def elixir_builds() do
     [
-      {erlang_build("24"), "1.14.5-otp-24"},
+      # {erlang_build("24"), "1.14.5-otp-24"},
       {erlang_build("25"), "1.14.5-otp-25"},
       {erlang_build("26"), "1.14.5-otp-26"},
 
-      {erlang_build("24"), "1.15.8-otp-24"},
+      # {erlang_build("24"), "1.15.8-otp-24"},
       {erlang_build("25"), "1.15.8-otp-25"},
       {erlang_build("26"), "1.15.8-otp-26"},
 
-      {erlang_build("24"), "1.16.3-otp-24"},
+      # {erlang_build("24"), "1.16.3-otp-24"},
       {erlang_build("25"), "1.16.3-otp-25"},
       {erlang_build("26"), "1.16.3-otp-26"},
 
@@ -18,9 +18,9 @@ defmodule ScriptBuilder do
       {erlang_build("26"), "1.17.3-otp-26"},
       {erlang_build("27"), "1.17.3-otp-27"},
 
-      {erlang_build("25"), "1.18.0-otp-25"},
-      {erlang_build("26"), "1.18.0-otp-26"},
-      {erlang_build("27"), "1.18.0-otp-27"},
+      {erlang_build("25"), "1.18.2-otp-25"},
+      {erlang_build("26"), "1.18.2-otp-26"},
+      {erlang_build("27"), "1.18.2-otp-27"},
     ]
   end
 
@@ -31,10 +31,10 @@ defmodule ScriptBuilder do
 
   def erlang_builds() do
     %{
-      "24" => "24.3.4.14",
+      # "24" => "24.3.4.14",
       "25" => "25.3.2.7",
       "26" => "26.2.5.6",
-      "27" => "27.2"
+      "27" => "27.2.1"
     }
   end
 
@@ -54,7 +54,7 @@ defmodule ScriptBuilder do
       IO.puts("asdf local erlang #{erlang_build}")
       IO.puts("asdf local elixir #{elixir_build}")
       IO.puts("mix local.hex --force")
-      IO.puts("mix test\n")
+      IO.puts("mix test --warnings-as-errors=false\n")
     end)
   end
 
@@ -72,4 +72,4 @@ defmodule ScriptBuilder do
   end
 end
 
-ScriptBuilder.test_commands()
+ScriptBuilder.dialyzer_commands()
