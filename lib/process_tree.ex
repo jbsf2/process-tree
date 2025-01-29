@@ -18,6 +18,7 @@ defmodule ProcessTree do
     @dialyzer {:no_match, {:known_ancestors, 3}}
     @dialyzer {:no_match, {:try_parent, 4}}
     @dialyzer {:no_unused, {:older_dictionary_ancestors, 2}}
+    @dialyzer {:no_unused, {:ensure_pid_is_local, 1}}
   end
 
   @doc """
@@ -33,7 +34,7 @@ defmodule ProcessTree do
   subsequent calls to `get()` with the same key will return the cached value. This behavior
   can be disabled by passing `cache: false` as an option.
 
-  ## parents, `$ancestors` and `$callers`
+  ## Parents, `$ancestors` and `$callers`
 
   Erlang provides [two mechanisms](https://saltycrackers.dev/posts/how-to-get-the-parent-of-an-elixir-process/)
   for finding the ancestors of a process: `:erlang.process_info(pid, :parent)`, available
@@ -49,6 +50,12 @@ defmodule ProcessTree do
   any `$callers`. If it does, `get/2` will look up to the first caller, look in its dictionary, then
   if necessary examine the caller's parents/`$ancestors` and `$callers`, with priority again given to
   the parent/`$ancestors` hierarchy.
+
+  ## Remote ancestors
+
+  In cases where it is called within a process started by a remote node, for example via the
+  `Node.spawn` functions, `get()` will examine only the processes local to its node. Its
+  search stops when it encounters a remote pid.
 
   ## Options
 
@@ -107,6 +114,11 @@ defmodule ProcessTree do
   is spawned by parent/grandparent GenServers that have registered names, and the parent GenServer dies,
   then the parent & grandparent may be represented in the list of the child's known ancestors using
   the their registered names - atoms, rather than pids. Precise behavior depends on OTP major version.
+
+  In cases where it is called within a process started by a remote node, for example via the
+  `Node.spawn` functions, the list returned by `known_ancestors()` will contain only the pids
+  belonging to the local node. `known_ancestors()` ends its search when it encounters a remote
+  pid in the ancestry hierarchy.
   """
   @spec known_ancestors(pid()) :: [pid() | atom()]
   def known_ancestors(pid) do
@@ -117,7 +129,7 @@ defmodule ProcessTree do
   @doc """
   Returns the parent of `pid`, if the parent is known.
 
-  Returns `:unknown` if the parent is unknown.
+  Returns `:unknown` if the parent is unknown, or if the parent belongs to a remote node.
 
   Returns `:undefined` if `pid` represents the `:init` process (`PID<0.0.0>`).
 
@@ -254,7 +266,7 @@ defmodule ProcessTree do
           nil
 
         {:parent, parent} ->
-          parent
+          ensure_pid_is_local(parent)
 
         nil ->
           nil
@@ -266,6 +278,14 @@ defmodule ProcessTree do
     end
   else
     defp process_info_parent(_pid), do: nil
+  end
+
+  @spec ensure_pid_is_local(pid()) :: pid() | nil
+  defp ensure_pid_is_local(pid) do
+    case node(pid) == node() do
+      true -> pid
+      false -> nil
+    end
   end
 
   @spec get_dictionary_value(id(), term()) :: term()

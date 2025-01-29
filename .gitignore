@@ -28,3 +28,6 @@ process_tree-*.tar
 .vscode
 .tool-versions
 scratch.*
+
+.idea
+*.iml

@@ -442,6 +442,57 @@ defmodule ProcessTreeTest do
     end
   end
 
+  describe "handling remote pids" do
+    setup do
+      ensure_epmd_running()
+      ensure_local_node_started()
+      :ok
+    end
+
+    test "get() stops walking the tree if it encounters a remote pid" do
+      Node.spawn_link(remote_node(), RemoteTestFunctions, :test_nested_get, [self()])
+
+      assert_receive :done
+    end
+
+    test "known_ancestors() only includes ancestors on the local node" do
+      Node.spawn_link(remote_node(), RemoteTestFunctions, :test_ancestors, [self()])
+
+      assert_receive :done
+    end
+
+    test "parent() doesn't blow up"  do
+      Node.spawn_link(remote_node(), RemoteTestFunctions, :test_get_parent, [self()])
+
+      assert_receive :done
+    end
+  end
+
+  @spec remote_node() :: node()
+  defp remote_node() do
+    {:ok, pid, _} =
+      :peer.start_link(%{connection: :standard_io, args: [~c"-pa" | :code.get_path()]})
+
+    :peer.call(pid, :net_kernel, :start, [[:other, :shortnames]])
+    :peer.call(pid, :erlang, :node, [])
+  end
+
+  defp ensure_local_node_started() do
+    %{started: started} = :net_kernel.get_state()
+
+    if started == :no do
+      {:ok, _} = :net_kernel.start([:process_tree_test, :shortnames])
+    end
+  end
+
+  defp ensure_epmd_running() do
+    {_, exit_code} = System.cmd("epmd", ["-names"], stderr_to_stdout: true)
+
+    if exit_code != 0 do
+      System.cmd("epmd", ["-daemon"])
+    end
+  end
+
   @spec full_name(atom()) :: atom()
   defp full_name(pid_name) do
     prefix = Process.get(:process_name_prefix)

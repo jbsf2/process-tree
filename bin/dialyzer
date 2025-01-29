@@ -2,12 +2,6 @@
 
 set -euxo pipefail
 
-asdf local erlang 24.3.4.14
-asdf local elixir 1.14.5-otp-24
-rm -rf _build
-mix local.hex --force
-mix dialyzer
-
 asdf local erlang 25.3.2.7
 asdf local elixir 1.14.5-otp-25
 rm -rf _build
@@ -20,12 +14,6 @@ rm -rf _build
 mix local.hex --force
 mix dialyzer
 
-asdf local erlang 24.3.4.14
-asdf local elixir 1.15.8-otp-24
-rm -rf _build
-mix local.hex --force
-mix dialyzer
-
 asdf local erlang 25.3.2.7
 asdf local elixir 1.15.8-otp-25
 rm -rf _build
@@ -34,12 +22,6 @@ mix dialyzer
 
 asdf local erlang 26.2.5.6
 asdf local elixir 1.15.8-otp-26
-rm -rf _build
-mix local.hex --force
-mix dialyzer
-
-asdf local erlang 24.3.4.14
-asdf local elixir 1.16.3-otp-24
 rm -rf _build
 mix local.hex --force
 mix dialyzer
@@ -68,26 +50,26 @@ rm -rf _build
 mix local.hex --force
 mix dialyzer
 
-asdf local erlang 27.2
+asdf local erlang 27.2.1
 asdf local elixir 1.17.3-otp-27
 rm -rf _build
 mix local.hex --force
 mix dialyzer
 
 asdf local erlang 25.3.2.7
-asdf local elixir 1.18.0-otp-25
+asdf local elixir 1.18.2-otp-25
 rm -rf _build
 mix local.hex --force
 mix dialyzer
 
 asdf local erlang 26.2.5.6
-asdf local elixir 1.18.0-otp-26
+asdf local elixir 1.18.2-otp-26
 rm -rf _build
 mix local.hex --force
 mix dialyzer
 
-asdf local erlang 27.2
-asdf local elixir 1.18.0-otp-27
+asdf local erlang 27.2.1
+asdf local elixir 1.18.2-otp-27
 rm -rf _build
 mix local.hex --force
 mix dialyzer
