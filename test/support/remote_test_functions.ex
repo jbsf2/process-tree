@@ -1,4 +1,5 @@
 defmodule RemoteTestFunctions do
+  @moduledoc false
 
   def test_nested_get(test_pid) do
     Task.async(fn ->

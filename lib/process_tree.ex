@@ -88,6 +88,29 @@ defmodule ProcessTree do
   end
 
   @doc """
+  Recursively looks for a value for `key` in process dictionaries of `pid` and its known
+  ancestors/callers.
+
+  If a particular ancestor process has died, it looks up to the next ancestor, if possible.
+
+  Returns the first non-nil value found in the tree. If no value is found, returns `nil`.
+
+  In terms of navigating the tree, `get_from/2` behaves identically to `get/2`.
+
+  Unlike `get/2`, `get_from/2` is not expected to be used in production code, but rather
+  only in less-common testing situations such as the one described in this
+  [github issue](https://github.com/jbsf2/process-tree/issues/9).
+
+  Accoringly, `get_from/2`
+  does not have options for caching values or returning default values, as those options
+  lose their benefit outside of production code.
+  """
+  @spec get_from(pid(), term()) :: term()
+  def get_from(pid, key) do
+    actually_get(key, pid, dictionary_ancestors(pid), false)
+  end
+
+  @doc """
   Returns a list of the known ancestors of `pid`, from "newest" to "oldest".
 
   The set of ancestors that is "known" depends on factors including:

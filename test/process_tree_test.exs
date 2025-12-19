@@ -442,6 +442,37 @@ defmodule ProcessTreeTest do
     end
   end
 
+  describe "get_from/2" do
+    test "returns a value if found in the tree" do
+      Process.put(:foo, :bar)
+
+      [start_task(self(), :task)] |> execute()
+
+      # Query the task's tree from the test process
+      other_pid = pid(:task)
+      assert ProcessTree.get_from(other_pid, :foo) == :bar
+    end
+
+    test "returns nil if there is no value found" do
+      [start_task(self(), :task)] |> execute()
+
+      other_pid = pid(:task)
+      assert ProcessTree.get_from(other_pid, :nonexistent) == nil
+    end
+
+    test "works with $callers", %{supervisor: supervisor} do
+      # This is the exact use case from issue #9
+      Process.put(:foo, :bar)
+
+      [supervise_task(self(), supervisor, :task)] |> execute()
+
+      assert !ancestor?(:task, self())
+      assert caller?(:task, self())
+
+      assert ProcessTree.get_from(pid(:task), :foo) == :bar
+    end
+  end
+
   describe "handling remote pids" do
     setup do
       ensure_epmd_running()
