@@ -125,7 +125,7 @@ defmodule ProcessTree do
   end
 
   @doc """
-  Recursively looks for a value for `key` in process dictionaries of `pid` and its known
+  Recursively looks for a value for `key` in the process dictionaries of `pid` and its known
   ancestors/callers.
 
   If a particular ancestor process has died, it looks up to the next ancestor, if possible.
@@ -138,8 +138,7 @@ defmodule ProcessTree do
   only in less-common testing situations such as the one described in this
   [github issue](https://github.com/jbsf2/process-tree/issues/9).
 
-  Accoringly, `get_from/2`
-  does not have options for caching values or returning default values, as those options
+  Accordingly, `get_from/2` does not have options for caching values or returning default values, as those options
   lose their benefit outside of production code.
   """
   @spec get_from(pid(), term()) :: term()
