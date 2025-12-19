@@ -56,5 +56,4 @@ defmodule RemoteTestFunctions do
       raise "it failed"
     end
   end
-
 end

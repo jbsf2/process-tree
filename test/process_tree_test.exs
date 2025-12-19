@@ -315,6 +315,40 @@ defmodule ProcessTreeTest do
       assert Process.get(:foo) == nil
     end
 
+    test "when a value is found, it does not call the lazy_default function" do
+      Process.put(:foo, :bar)
+
+      assert ProcessTree.get(:foo, lazy_default: fn -> raise "should not be called" end) == :bar
+    end
+
+    test "when a value is not found, it calls the lazy_default function" do
+      assert Process.get(:foo) == nil
+
+      assert ProcessTree.get(:foo, lazy_default: fn -> :lazy_value end) == :lazy_value
+    end
+
+    test "when a value is not found, it caches the lazy_default value" do
+      assert Process.get(:foo) == nil
+
+      assert ProcessTree.get(:foo, lazy_default: fn -> :lazy_value end) == :lazy_value
+
+      assert Process.get(:foo) == :lazy_value
+    end
+
+    test "when `cache: false`, the lazy_default value is not cached" do
+      assert Process.get(:foo) == nil
+
+      assert ProcessTree.get(:foo, lazy_default: fn -> :lazy_value end, cache: false) == :lazy_value
+
+      assert Process.get(:foo) == nil
+    end
+
+    test "raises ArgumentError when both :default and :lazy_default are provided" do
+      assert_raise ArgumentError, ":default and :lazy_default options are mutually exclusive", fn ->
+        ProcessTree.get(:foo, default: :bar, lazy_default: fn -> :baz end)
+      end
+    end
+
     test "by default, it caches the result" do
       [
         start_task(self(), :gen1),
@@ -492,7 +526,7 @@ defmodule ProcessTreeTest do
       assert_receive :done
     end
 
-    test "parent() doesn't blow up"  do
+    test "parent() doesn't blow up" do
       Node.spawn_link(remote_node(), RemoteTestFunctions, :test_get_parent, [self()])
 
       assert_receive :done

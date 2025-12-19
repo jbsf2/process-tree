@@ -72,18 +72,55 @@ defmodule ProcessTree do
     default_value = Application.get_env(:my_app, :some_key)
     value = ProcessTree.get(:some_key, default: default_value)
     ```
+
+  * `:lazy_default` - A zero-arity function that will be called to obtain a default value
+    when no value is found in the tree. This is useful when it is impossible or undesirable
+    to compute the default value unless/until it is actually requested.
+
+    If caching is enabled, the default value will be cached in the dictionary of the
+    calling process.
+
+    `:default` and `:lazy_default` are mutually exclusive; `get/2` will raise an `ArgumentError`
+    if both options are provided.
+
+    Examples:
+
+    ```
+    value = ProcessTree.get(:some_key, lazy_default: fn -> compute_me_later() end)
+    value = ProcessTree.get(:some_key, lazy_default: &compute_me_later/0)
+    ```
   """
   @spec get(term(), keyword()) :: term()
   def get(key, opts \\ []) do
+    validate_default_options!(opts)
     cache_result? = opts[:cache] != false
 
     case actually_get(key, self(), dictionary_ancestors(self()), cache_result?) do
       nil ->
-        if cache_result? && Keyword.has_key?(opts, :default), do: Process.put(key, opts[:default])
-        opts[:default]
+        default = compute_default(opts)
+        if cache_result? && has_default_option?(opts), do: Process.put(key, default)
+
+        default
 
       value ->
         value
+    end
+  end
+
+  defp validate_default_options!(opts) do
+    if Keyword.has_key?(opts, :default) && Keyword.has_key?(opts, :lazy_default) do
+      raise ArgumentError, ":default and :lazy_default options are mutually exclusive"
+    end
+  end
+
+  defp has_default_option?(opts) do
+    Keyword.has_key?(opts, :default) || Keyword.has_key?(opts, :lazy_default)
+  end
+
+  defp compute_default(opts) do
+    case Keyword.has_key?(opts, :lazy_default) do
+      true -> opts[:lazy_default].()
+      false -> opts[:default]
     end
   end
 
